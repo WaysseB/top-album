@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useEffect, useState } from "react"
-import { formatGenres, LIST_LABELS, parseGenres, type Album, type AlbumInput, type AlbumList } from "@/lib/albums"
+import { formatGenres, LIST_TAB_LABELS, parseGenres, type Album, type AlbumInput, type AlbumList } from "@/lib/albums"
 import { Button } from "@/components/ui/button"
 import { parseDeezerRef } from "@/lib/deezer"
 import { X } from "lucide-react"
@@ -187,14 +187,15 @@ export function AlbumForm({ open, initial, defaultList, onClose, onSubmit }: Pro
                 <label htmlFor="list" className="text-xs font-medium text-muted-foreground">
                   Liste
                 </label>
+                {/* `pr-8` degage la fleche native, qui sinon chevauche le libelle */}
                 <select
                   id="list"
-                  className={field}
+                  className={`${field} pr-8`}
                   value={list}
                   onChange={(e) => setList(e.target.value as AlbumList)}
                 >
-                  <option value="top">{LIST_LABELS.top}</option>
-                  <option value="wannabe">{LIST_LABELS.wannabe}</option>
+                  <option value="top">{LIST_TAB_LABELS.top}</option>
+                  <option value="wannabe">{LIST_TAB_LABELS.wannabe}</option>
                 </select>
               </div>
             </div>

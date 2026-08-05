@@ -91,6 +91,18 @@ export function AlbumDetail({ album, rank, isAdmin, onClose, onEdit, onDelete }:
               {album.favoriteTrack && (
                 <p className="mt-1 text-sm italic text-muted-foreground/90">♪ {album.favoriteTrack}</p>
               )}
+              {album.genres.length > 0 && (
+                <div className="mt-2.5 flex flex-wrap gap-1.5">
+                  {album.genres.map((genre) => (
+                    <span
+                      key={genre}
+                      className="rounded-full border border-border bg-secondary px-2 py-0.5 text-xs text-muted-foreground"
+                    >
+                      {genre}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
 
             {album.note && <p className="text-sm leading-relaxed text-foreground/80 text-pretty">{album.note}</p>}

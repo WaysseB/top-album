@@ -73,6 +73,12 @@ export function AlbumCard({ album, rank, onOpen }: Props) {
         {album.favoriteTrack && (
           <p className="truncate text-xs italic text-muted-foreground/80">♪ {album.favoriteTrack}</p>
         )}
+        {album.genres.length > 0 && (
+          // Deux genres au plus : au-dela, la ligne devient du bruit dans la grille.
+          <p className="truncate pt-0.5 font-mono text-[0.65rem] uppercase tracking-wider text-muted-foreground/70">
+            {album.genres.slice(0, 2).join(" · ")}
+          </p>
+        )}
       </div>
     </button>
   )
