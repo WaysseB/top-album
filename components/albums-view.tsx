@@ -3,22 +3,39 @@
 import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAlbums } from "@/hooks/use-albums"
-import { LIST_LABELS, LIST_TAB_LABELS, type Album, type AlbumInput, type AlbumList, type ListCounts } from "@/lib/albums"
+import {
+  decadeLabel,
+  decadeOf,
+  LIST_LABELS,
+  LIST_TAB_LABELS,
+  NO_DECADE,
+  type Album,
+  type AlbumInput,
+  type AlbumList,
+  type ListCounts,
+} from "@/lib/albums"
 import { logoutAction } from "@/app/actions"
 import { AlbumCard } from "@/components/album-card"
 import { AlbumForm } from "@/components/album-form"
 import { AlbumDetail } from "@/components/album-detail"
 import { AlbumSearch } from "@/components/album-search"
-import { GenreFilter } from "@/components/genre-filter"
+import { FacetFilter, type FacetItem } from "@/components/facet-filter"
 import { ListTabs } from "@/components/list-tabs"
 import { Button } from "@/components/ui/button"
 import { LogOut, Plus } from "lucide-react"
 
 type Props = {
   list: AlbumList
-  initialAlbums: Album[]
+  albumsByList: Record<AlbumList, Album[]>
   counts: ListCounts
   isAdmin: boolean
+}
+
+/** Un album avec son rang, et la liste d'ou il vient. */
+type Entry = {
+  album: Album
+  rank: number
+  list: AlbumList
 }
 
 const SUBTITLES: Record<AlbumList, string> = {
@@ -40,9 +57,25 @@ function fold(value: string): string {
     .trim()
 }
 
-export function AlbumsView({ list, initialAlbums, counts, isAdmin }: Props) {
+function decadeKey(album: Album): string {
+  const decade = decadeOf(album.year)
+  return decade === null ? NO_DECADE : String(decade)
+}
+
+/** Compte les occurrences d'une cle sur un ensemble d'entrees. */
+function tally(entries: Entry[], keysOf: (album: Album) => string[]): Map<string, number> {
+  const counts = new Map<string, number>()
+  for (const { album } of entries) {
+    for (const key of keysOf(album)) counts.set(key, (counts.get(key) ?? 0) + 1)
+  }
+  return counts
+}
+
+export function AlbumsView({ list, albumsByList, counts, isAdmin }: Props) {
   const router = useRouter()
-  const { albums, pending, error, clearError, addAlbum, updateAlbum, removeAlbum } = useAlbums(initialAlbums)
+  const { albums, pending, error, clearError, addAlbum, updateAlbum, removeAlbum } = useAlbums(
+    albumsByList[list],
+  )
 
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Album | null>(null)
@@ -50,41 +83,106 @@ export function AlbumsView({ list, initialAlbums, counts, isAdmin }: Props) {
   const [notice, setNotice] = useState<string | null>(null)
   const [query, setQuery] = useState("")
   const [genre, setGenre] = useState<string | null>(null)
+  const [decade, setDecade] = useState<string | null>(null)
 
-  // Une erreur remontee par le serveur remplace le message de succes.
   useEffect(() => {
     if (error) setNotice(null)
   }, [error])
 
-  // Le rang est fige sur la liste complete : filtrer ne doit pas renumeroter.
-  const ranked = useMemo(() => albums.map((album, index) => ({ album, rank: index + 1 })), [albums])
+  const otherList: AlbumList = list === "top" ? "wannabe" : "top"
 
-  // Genres presents dans la liste courante, avec leur effectif, par frequence decroissante.
-  const genres = useMemo(() => {
-    const tally = new Map<string, number>()
-    for (const { album } of ranked) {
-      for (const g of album.genres) tally.set(g, (tally.get(g) ?? 0) + 1)
-    }
-    return [...tally.entries()]
-      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "fr"))
-      .map(([name, count]) => ({ name, count }))
-  }, [ranked])
+  // Le rang est fige sur la liste complete : filtrer ne renumerote pas.
+  const currentEntries = useMemo<Entry[]>(
+    () => albums.map((album, index) => ({ album, rank: index + 1, list })),
+    [albums, list],
+  )
+  const otherEntries = useMemo<Entry[]>(
+    () => albumsByList[otherList].map((album, index) => ({ album, rank: index + 1, list: otherList })),
+    [albumsByList, otherList],
+  )
 
-  // Un genre disparu (liste changee) ne doit pas figer la grille sur du vide.
+  const needle = fold(query)
+  const searching = needle.length > 0
+
+  // La recherche porte sur les deux listes ; sans recherche, on reste sur l'onglet.
+  const scope = useMemo(
+    () => (searching ? [...currentEntries, ...otherEntries] : currentEntries),
+    [searching, currentEntries, otherEntries],
+  )
+
+  const searched = useMemo(
+    () =>
+      needle
+        ? scope.filter(
+            ({ album }) => fold(album.title).includes(needle) || fold(album.artist).includes(needle),
+          )
+        : scope,
+    [scope, needle],
+  )
+
+  const matchesGenre = (entry: Entry) => !genre || entry.album.genres.includes(genre)
+  const matchesDecade = (entry: Entry) => !decade || decadeKey(entry.album) === decade
+
+  // Chaque facette compte SANS s'appliquer a elle-meme, sinon les autres
+  // pastilles tomberaient a zero des qu'un choix est fait.
+  const forGenres = useMemo(() => searched.filter(matchesDecade), [searched, decade])
+  const forDecades = useMemo(() => searched.filter(matchesGenre), [searched, genre])
+
+  const genreItems = useMemo<FacetItem[]>(
+    () =>
+      [...tally(forGenres, (a) => a.genres).entries()]
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "fr"))
+        .map(([key, count]) => ({ key, label: key, count })),
+    [forGenres],
+  )
+
+  const decadeItems = useMemo<FacetItem[]>(() => {
+    const counted = tally(forDecades, (a) => [decadeKey(a)])
+    const dated = [...counted.entries()]
+      .filter(([key]) => key !== NO_DECADE)
+      .sort((a, b) => Number(a[0]) - Number(b[0]))
+      .map(([key, count]) => ({ key, label: decadeLabel(Number(key)), count }))
+
+    // « Sans année » ferme la marche : c'est aussi le raccourci vers les fiches à compléter.
+    const undated = counted.get(NO_DECADE)
+    return undated ? [...dated, { key: NO_DECADE, label: "Sans année", count: undated }] : dated
+  }, [forDecades])
+
+  // Une valeur devenue absente ne doit pas figer la grille sur du vide.
   useEffect(() => {
-    if (genre && !genres.some((g) => g.name === genre)) setGenre(null)
-  }, [genre, genres])
+    if (genre && !genreItems.some((item) => item.key === genre)) setGenre(null)
+  }, [genre, genreItems])
+  useEffect(() => {
+    if (decade && !decadeItems.some((item) => item.key === decade)) setDecade(null)
+  }, [decade, decadeItems])
 
-  const visible = useMemo(() => {
-    const needle = fold(query)
-    return ranked.filter(({ album }) => {
-      if (genre && !album.genres.includes(genre)) return false
-      if (!needle) return true
-      return fold(album.title).includes(needle) || fold(album.artist).includes(needle)
-    })
-  }, [ranked, query, genre])
+  const visible = useMemo(
+    () => searched.filter(matchesGenre).filter(matchesDecade),
+    [searched, genre, decade],
+  )
 
-  const detailEntry = ranked.find(({ album }) => album.id === detailId) ?? null
+  // En recherche, on separe les resultats par liste — l'onglet courant d'abord.
+  const sections = useMemo(
+    () =>
+      [list, otherList]
+        .map((section) => ({ list: section, entries: visible.filter((e) => e.list === section) }))
+        .filter(({ entries }) => entries.length > 0),
+    [visible, list, otherList],
+  )
+
+  const allEntries = useMemo(
+    () => [...currentEntries, ...otherEntries],
+    [currentEntries, otherEntries],
+  )
+  const detailEntry = allEntries.find(({ album }) => album.id === detailId) ?? null
+
+  const filtered = searching || genre !== null || decade !== null
+
+  const resetFilters = () => {
+    setQuery("")
+    setGenre(null)
+    setDecade(null)
+  }
 
   const openAdd = () => {
     setEditing(null)
@@ -113,6 +211,18 @@ export function AlbumsView({ list, initialAlbums, counts, isAdmin }: Props) {
     await logoutAction()
     router.refresh()
   }
+
+  const grid = (entries: Entry[]) => (
+    <div
+      className={`grid grid-cols-2 gap-x-3 gap-y-6 transition-opacity sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 ${
+        pending ? "opacity-70" : ""
+      }`}
+    >
+      {entries.map(({ album, rank }) => (
+        <AlbumCard key={album.id} album={album} rank={rank} onOpen={() => setDetailId(album.id)} />
+      ))}
+    </div>
+  )
 
   return (
     <main className="min-h-screen px-4 py-10 sm:px-8 lg:px-12">
@@ -148,10 +258,29 @@ export function AlbumsView({ list, initialAlbums, counts, isAdmin }: Props) {
           <AlbumSearch value={query} onChange={setQuery} resultCount={visible.length} />
         </div>
 
-        {genres.length > 1 && (
-          <div className="mb-6">
-            <GenreFilter genres={genres} total={ranked.length} selected={genre} onSelect={setGenre} />
+        {(genreItems.length > 1 || decadeItems.length > 1) && (
+          <div className="mb-6 flex flex-col gap-2">
+            <FacetFilter
+              ariaLabel="Filtrer par genre"
+              items={genreItems}
+              total={forGenres.length}
+              selected={genre}
+              onSelect={setGenre}
+            />
+            <FacetFilter
+              ariaLabel="Filtrer par décennie"
+              items={decadeItems}
+              total={forDecades.length}
+              selected={decade}
+              onSelect={setDecade}
+            />
           </div>
+        )}
+
+        {searching && (
+          <p className="mb-5 text-sm text-muted-foreground">
+            Recherche sur les deux listes — {visible.length} résultat{visible.length > 1 ? "s" : ""}.
+          </p>
         )}
 
         {error && (
@@ -184,7 +313,7 @@ export function AlbumsView({ list, initialAlbums, counts, isAdmin }: Props) {
           </div>
         )}
 
-        {albums.length === 0 ? (
+        {albums.length === 0 && !searching ? (
           <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-border py-24 text-center">
             <p className="text-sm text-muted-foreground">{EMPTY_STATES[list]}</p>
             {isAdmin && (
@@ -196,31 +325,39 @@ export function AlbumsView({ list, initialAlbums, counts, isAdmin }: Props) {
           </div>
         ) : visible.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border py-24 text-center">
-            <p className="text-sm text-muted-foreground">
-              Aucun album {query && <>ne correspond à « {query} »</>}
-              {query && genre && " "}
-              {genre && <>dans le genre « {genre} »</>}.
-            </p>
+            <p className="text-sm text-muted-foreground">Aucun album ne correspond à ces critères.</p>
             <button
-              onClick={() => {
-                setQuery("")
-                setGenre(null)
-              }}
+              onClick={resetFilters}
               className="font-mono text-xs uppercase tracking-widest text-muted-foreground underline underline-offset-4 hover:text-foreground"
             >
               Réinitialiser les filtres
             </button>
           </div>
-        ) : (
-          <div
-            className={`grid grid-cols-2 gap-x-3 gap-y-6 transition-opacity sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 ${
-              pending ? "opacity-70" : ""
-            }`}
-          >
-            {visible.map(({ album, rank }) => (
-              <AlbumCard key={album.id} album={album} rank={rank} onOpen={() => setDetailId(album.id)} />
+        ) : searching ? (
+          <div className="flex flex-col gap-8">
+            {sections.map(({ list: section, entries }) => (
+              <section key={section}>
+                <h2 className="mb-3 flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-muted-foreground">
+                  {LIST_TAB_LABELS[section]}
+                  <span className="rounded-full bg-secondary px-1.5 py-0.5 text-[0.65rem] text-muted-foreground">
+                    {entries.length}
+                  </span>
+                </h2>
+                {grid(entries)}
+              </section>
             ))}
           </div>
+        ) : (
+          grid(visible)
+        )}
+
+        {filtered && visible.length > 0 && (
+          <button
+            onClick={resetFilters}
+            className="mt-8 font-mono text-xs uppercase tracking-widest text-muted-foreground underline underline-offset-4 hover:text-foreground"
+          >
+            Réinitialiser les filtres
+          </button>
         )}
       </div>
 

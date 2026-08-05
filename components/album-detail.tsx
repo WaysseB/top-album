@@ -54,10 +54,14 @@ export function AlbumDetail({ album, rank, isAdmin, onClose, onEdit, onDelete }:
           <div className="relative aspect-square w-full">
             {album.cover ? (
               // eslint-disable-next-line @next/next/no-img-element
+              // La fiche s'ouvre a la demande : la pochette est prioritaire ici.
               <img
                 src={album.cover || "/placeholder.svg"}
                 alt={`Pochette de ${album.title}`}
                 crossOrigin="anonymous"
+                decoding="async"
+                width={300}
+                height={300}
                 className="h-full w-full object-cover"
               />
             ) : (

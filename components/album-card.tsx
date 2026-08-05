@@ -43,10 +43,16 @@ export function AlbumCard({ album, rank, onOpen }: Props) {
       <div className="relative aspect-square w-full overflow-hidden rounded-md bg-card">
         {album.cover ? (
           // eslint-disable-next-line @next/next/no-img-element
+          // La grille compte jusqu'a 118 pochettes : sans `lazy`, le navigateur
+          // les telecharge toutes avant le premier defilement.
           <img
             src={album.cover || "/placeholder.svg"}
             alt={`Pochette de ${album.title}`}
             crossOrigin="anonymous"
+            loading="lazy"
+            decoding="async"
+            width={300}
+            height={300}
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
         ) : (

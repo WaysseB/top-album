@@ -130,6 +130,20 @@ export function normalizeAlbumInput(input: AlbumInput): AlbumInput {
   }
 }
 
+/** Cle de facette pour les albums dont l'annee est inconnue. */
+export const NO_DECADE = "none"
+
+/** "1994" -> 1990 ; chaine vide ou invalide -> null. */
+export function decadeOf(year: string | undefined): number | null {
+  const parsed = Number.parseInt((year ?? "").trim(), 10)
+  return Number.isFinite(parsed) && parsed > 1000 ? Math.floor(parsed / 10) * 10 : null
+}
+
+/** 1990 -> « 90s » ; 2010 -> « 2010s ». */
+export function decadeLabel(decade: number): string {
+  return decade >= 2000 ? `${decade}s` : `${String(decade).slice(2)}s`
+}
+
 const MAX_GENRES = 12
 
 /** « Rock, Alternative » -> ["Rock", "Alternative"], sans doublon ni casse divergente. */
