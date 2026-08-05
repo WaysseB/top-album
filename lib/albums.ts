@@ -30,7 +30,13 @@ export type Album = {
   cover: string
   note?: string
   favoriteTrack?: string
+  /** Lecteur integre dans la fiche. */
   deezerUrl?: string
+  /** Simples liens de redirection. */
+  spotifyUrl?: string
+  appleMusicUrl?: string
+  /** Pre-rempli depuis Deezer par un script, corrigeable dans le formulaire. */
+  genres: string[]
 }
 
 /** Un album tel que saisi dans le formulaire : sans id, celui-ci est genere en base. */
@@ -47,11 +53,14 @@ export type AlbumRow = {
   note: string | null
   favorite_track: string | null
   deezer_url: string | null
+  spotify_url: string | null
+  apple_music_url: string | null
+  genres: string[] | null
   position: number
 }
 
 export const ALBUM_COLUMNS =
-  "id, list, title, artist, year, cover, note, favorite_track, deezer_url, position"
+  "id, list, title, artist, year, cover, note, favorite_track, deezer_url, spotify_url, apple_music_url, genres, position"
 
 export function rowToAlbum(row: AlbumRow): Album {
   return {
@@ -64,6 +73,9 @@ export function rowToAlbum(row: AlbumRow): Album {
     note: row.note ?? undefined,
     favoriteTrack: row.favorite_track ?? undefined,
     deezerUrl: row.deezer_url ?? undefined,
+    spotifyUrl: row.spotify_url ?? undefined,
+    appleMusicUrl: row.apple_music_url ?? undefined,
+    genres: row.genres ?? [],
   }
 }
 
@@ -102,7 +114,6 @@ export function normalizeAlbumInput(input: AlbumInput): AlbumInput {
 
   const note = clean(input.note, MAX_NOTE)
   const favoriteTrack = clean(input.favoriteTrack, MAX_TEXT)
-  const deezerUrl = cleanUrl(input.deezerUrl)
 
   return {
     list: assertList(input.list),
@@ -112,8 +123,27 @@ export function normalizeAlbumInput(input: AlbumInput): AlbumInput {
     cover: cleanUrl(input.cover),
     note: note || undefined,
     favoriteTrack: favoriteTrack || undefined,
-    deezerUrl: deezerUrl || undefined,
+    deezerUrl: cleanUrl(input.deezerUrl) || undefined,
+    spotifyUrl: cleanUrl(input.spotifyUrl) || undefined,
+    appleMusicUrl: cleanUrl(input.appleMusicUrl) || undefined,
+    genres: parseGenres(formatGenres(input.genres)),
   }
+}
+
+const MAX_GENRES = 12
+
+/** « Rock, Alternative » -> ["Rock", "Alternative"], sans doublon ni casse divergente. */
+export function parseGenres(value: string): string[] {
+  const seen = new Map<string, string>()
+  for (const part of (value ?? "").split(",")) {
+    const genre = part.trim().slice(0, 60)
+    if (genre && !seen.has(genre.toLowerCase())) seen.set(genre.toLowerCase(), genre)
+  }
+  return [...seen.values()].slice(0, MAX_GENRES)
+}
+
+export function formatGenres(genres: string[] | undefined): string {
+  return (genres ?? []).join(", ")
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i

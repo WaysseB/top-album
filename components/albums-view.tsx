@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
 import { useAlbums } from "@/hooks/use-albums"
 import { LIST_LABELS, LIST_TAB_LABELS, type Album, type AlbumInput, type AlbumList, type ListCounts } from "@/lib/albums"
 import { logoutAction } from "@/app/actions"
@@ -10,9 +9,10 @@ import { AlbumCard } from "@/components/album-card"
 import { AlbumForm } from "@/components/album-form"
 import { AlbumDetail } from "@/components/album-detail"
 import { AlbumSearch } from "@/components/album-search"
+import { GenreFilter } from "@/components/genre-filter"
 import { ListTabs } from "@/components/list-tabs"
-import { Button, buttonVariants } from "@/components/ui/button"
-import { LogIn, LogOut, Plus } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { LogOut, Plus } from "lucide-react"
 
 type Props = {
   list: AlbumList
@@ -49,6 +49,7 @@ export function AlbumsView({ list, initialAlbums, counts, isAdmin }: Props) {
   const [detailId, setDetailId] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [query, setQuery] = useState("")
+  const [genre, setGenre] = useState<string | null>(null)
 
   // Une erreur remontee par le serveur remplace le message de succes.
   useEffect(() => {
@@ -58,13 +59,30 @@ export function AlbumsView({ list, initialAlbums, counts, isAdmin }: Props) {
   // Le rang est fige sur la liste complete : filtrer ne doit pas renumeroter.
   const ranked = useMemo(() => albums.map((album, index) => ({ album, rank: index + 1 })), [albums])
 
+  // Genres presents dans la liste courante, par frequence decroissante.
+  const genres = useMemo(() => {
+    const tally = new Map<string, number>()
+    for (const { album } of ranked) {
+      for (const g of album.genres) tally.set(g, (tally.get(g) ?? 0) + 1)
+    }
+    return [...tally.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "fr"))
+      .map(([name]) => name)
+  }, [ranked])
+
+  // Un genre disparu (liste changee) ne doit pas figer la grille sur du vide.
+  useEffect(() => {
+    if (genre && !genres.includes(genre)) setGenre(null)
+  }, [genre, genres])
+
   const visible = useMemo(() => {
     const needle = fold(query)
-    if (!needle) return ranked
-    return ranked.filter(
-      ({ album }) => fold(album.title).includes(needle) || fold(album.artist).includes(needle),
-    )
-  }, [ranked, query])
+    return ranked.filter(({ album }) => {
+      if (genre && !album.genres.includes(genre)) return false
+      if (!needle) return true
+      return fold(album.title).includes(needle) || fold(album.artist).includes(needle)
+    })
+  }, [ranked, query, genre])
 
   const detailEntry = ranked.find(({ album }) => album.id === detailId) ?? null
 
@@ -110,31 +128,31 @@ export function AlbumsView({ list, initialAlbums, counts, isAdmin }: Props) {
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            {isAdmin ? (
-              <>
-                <Button variant="outline" onClick={() => void handleLogout()}>
-                  <LogOut className="h-4 w-4" />
-                  Déconnexion
-                </Button>
-                <Button onClick={openAdd}>
-                  <Plus className="h-4 w-4" />
-                  Ajouter
-                </Button>
-              </>
-            ) : (
-              <Link href="/login" className={buttonVariants({ variant: "outline" })}>
-                <LogIn className="h-4 w-4" />
-                Connexion
-              </Link>
-            )}
-          </div>
+          {/* Rien n'est propose aux visiteurs : l'acces a /login se fait par l'URL. */}
+          {isAdmin && (
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={() => void handleLogout()}>
+                <LogOut className="h-4 w-4" />
+                Déconnexion
+              </Button>
+              <Button onClick={openAdd}>
+                <Plus className="h-4 w-4" />
+                Ajouter
+              </Button>
+            </div>
+          )}
         </header>
 
-        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <ListTabs counts={counts} />
           <AlbumSearch value={query} onChange={setQuery} resultCount={visible.length} />
         </div>
+
+        {genres.length > 1 && (
+          <div className="mb-6">
+            <GenreFilter genres={genres} selected={genre} onSelect={setGenre} />
+          </div>
+        )}
 
         {error && (
           <div
@@ -179,13 +197,18 @@ export function AlbumsView({ list, initialAlbums, counts, isAdmin }: Props) {
         ) : visible.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border py-24 text-center">
             <p className="text-sm text-muted-foreground">
-              Aucun album ne correspond à « {query} ».
+              Aucun album {query && <>ne correspond à « {query} »</>}
+              {query && genre && " "}
+              {genre && <>dans le genre « {genre} »</>}.
             </p>
             <button
-              onClick={() => setQuery("")}
+              onClick={() => {
+                setQuery("")
+                setGenre(null)
+              }}
               className="font-mono text-xs uppercase tracking-widest text-muted-foreground underline underline-offset-4 hover:text-foreground"
             >
-              Effacer la recherche
+              Réinitialiser les filtres
             </button>
           </div>
         ) : (

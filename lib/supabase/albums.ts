@@ -79,6 +79,9 @@ export async function insertAlbum(input: AlbumInput): Promise<Album> {
       note: album.note ?? null,
       favorite_track: album.favoriteTrack ?? null,
       deezer_url: album.deezerUrl ?? null,
+      spotify_url: album.spotifyUrl ?? null,
+      apple_music_url: album.appleMusicUrl ?? null,
+      genres: album.genres.length ? album.genres : null,
       position: await nextPosition(album.list),
     })
     .select(ALBUM_COLUMNS)
@@ -110,6 +113,9 @@ export async function updateAlbum(id: string, input: AlbumInput): Promise<Album>
     note: album.note ?? null,
     favorite_track: album.favoriteTrack ?? null,
     deezer_url: album.deezerUrl ?? null,
+    spotify_url: album.spotifyUrl ?? null,
+    apple_music_url: album.appleMusicUrl ?? null,
+    genres: album.genres.length ? album.genres : null,
   }
 
   // Changer de liste replace l'album en fin de liste cible : conserver son

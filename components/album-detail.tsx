@@ -1,7 +1,7 @@
 "use client"
 
 import type { Album } from "@/lib/albums"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { deezerPageUrl, deezerWidgetHeight, deezerWidgetUrl, parseDeezerRef } from "@/lib/deezer"
 import { ExternalLink, Pencil, Trash2, X } from "lucide-react"
 
@@ -116,6 +116,34 @@ export function AlbumDetail({ album, rank, isAdmin, onClose, onEdit, onDelete }:
                   Ouvrir sur Deezer
                   <ExternalLink className="h-3 w-3" aria-hidden="true" />
                 </a>
+              </div>
+            )}
+
+            {/* Redirections simples : pas de lecteur integre pour ces deux-la. */}
+            {(album.spotifyUrl || album.appleMusicUrl) && (
+              <div className="flex flex-wrap gap-2">
+                {album.spotifyUrl && (
+                  <a
+                    href={album.spotifyUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={buttonVariants({ variant: "outline", className: "flex-1" })}
+                  >
+                    Spotify
+                    <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                  </a>
+                )}
+                {album.appleMusicUrl && (
+                  <a
+                    href={album.appleMusicUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={buttonVariants({ variant: "outline", className: "flex-1" })}
+                  >
+                    Apple Music
+                    <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                  </a>
+                )}
               </div>
             )}
 

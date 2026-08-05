@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useEffect, useState } from "react"
-import { LIST_LABELS, type Album, type AlbumInput, type AlbumList } from "@/lib/albums"
+import { formatGenres, LIST_LABELS, parseGenres, type Album, type AlbumInput, type AlbumList } from "@/lib/albums"
 import { Button } from "@/components/ui/button"
 import { parseDeezerRef } from "@/lib/deezer"
 import { X } from "lucide-react"
@@ -25,6 +25,9 @@ const EMPTY = {
   note: "",
   favoriteTrack: "",
   deezerUrl: "",
+  spotifyUrl: "",
+  appleMusicUrl: "",
+  genres: "",
 }
 
 export function AlbumForm({ open, initial, defaultList, onClose, onSubmit }: Props) {
@@ -44,6 +47,9 @@ export function AlbumForm({ open, initial, defaultList, onClose, onSubmit }: Pro
             note: initial.note ?? "",
             favoriteTrack: initial.favoriteTrack ?? "",
             deezerUrl: initial.deezerUrl ?? "",
+            spotifyUrl: initial.spotifyUrl ?? "",
+            appleMusicUrl: initial.appleMusicUrl ?? "",
+            genres: formatGenres(initial.genres),
           }
         : EMPTY,
     )
@@ -66,6 +72,9 @@ export function AlbumForm({ open, initial, defaultList, onClose, onSubmit }: Pro
       note: form.note.trim() || undefined,
       favoriteTrack: form.favoriteTrack.trim() || undefined,
       deezerUrl: form.deezerUrl.trim() || undefined,
+      spotifyUrl: form.spotifyUrl.trim() || undefined,
+      appleMusicUrl: form.appleMusicUrl.trim() || undefined,
+      genres: parseGenres(form.genres),
     })
     onClose()
   }
@@ -209,6 +218,51 @@ export function AlbumForm({ open, initial, defaultList, onClose, onSubmit }: Pro
                 {deezerUnrecognized
                   ? "Adresse non reconnue : collez l'adresse complète de l'album depuis Deezer (les liens courts deezer.page.link ne fonctionnent pas)."
                   : "Collez l'adresse de l'album depuis Deezer pour afficher le lecteur."}
+              </p>
+            </div>
+
+            {/* Spotify et Apple Music : simples redirections, pas de lecteur. */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="spotifyUrl" className="text-xs font-medium text-muted-foreground">
+                  Lien Spotify
+                </label>
+                <input
+                  id="spotifyUrl"
+                  className={field}
+                  value={form.spotifyUrl}
+                  onChange={(e) => setForm((f) => ({ ...f, spotifyUrl: e.target.value }))}
+                  placeholder="https://open.spotify.com/album/…"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="appleMusicUrl" className="text-xs font-medium text-muted-foreground">
+                  Lien Apple Music
+                </label>
+                <input
+                  id="appleMusicUrl"
+                  className={field}
+                  value={form.appleMusicUrl}
+                  onChange={(e) => setForm((f) => ({ ...f, appleMusicUrl: e.target.value }))}
+                  placeholder="https://music.apple.com/…"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="genres" className="text-xs font-medium text-muted-foreground">
+                Genres
+              </label>
+              <input
+                id="genres"
+                className={field}
+                value={form.genres}
+                onChange={(e) => setForm((f) => ({ ...f, genres: e.target.value }))}
+                placeholder="Rock, Alternative"
+                aria-describedby="genres-hint"
+              />
+              <p id="genres-hint" className="text-xs text-muted-foreground">
+                Séparés par des virgules. Pré-remplis depuis Deezer, souvent approximatifs — corrigez-les librement.
               </p>
             </div>
 
