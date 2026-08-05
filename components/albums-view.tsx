@@ -59,7 +59,7 @@ export function AlbumsView({ list, initialAlbums, counts, isAdmin }: Props) {
   // Le rang est fige sur la liste complete : filtrer ne doit pas renumeroter.
   const ranked = useMemo(() => albums.map((album, index) => ({ album, rank: index + 1 })), [albums])
 
-  // Genres presents dans la liste courante, par frequence decroissante.
+  // Genres presents dans la liste courante, avec leur effectif, par frequence decroissante.
   const genres = useMemo(() => {
     const tally = new Map<string, number>()
     for (const { album } of ranked) {
@@ -67,12 +67,12 @@ export function AlbumsView({ list, initialAlbums, counts, isAdmin }: Props) {
     }
     return [...tally.entries()]
       .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "fr"))
-      .map(([name]) => name)
+      .map(([name, count]) => ({ name, count }))
   }, [ranked])
 
   // Un genre disparu (liste changee) ne doit pas figer la grille sur du vide.
   useEffect(() => {
-    if (genre && !genres.includes(genre)) setGenre(null)
+    if (genre && !genres.some((g) => g.name === genre)) setGenre(null)
   }, [genre, genres])
 
   const visible = useMemo(() => {
@@ -150,7 +150,7 @@ export function AlbumsView({ list, initialAlbums, counts, isAdmin }: Props) {
 
         {genres.length > 1 && (
           <div className="mb-6">
-            <GenreFilter genres={genres} selected={genre} onSelect={setGenre} />
+            <GenreFilter genres={genres} total={ranked.length} selected={genre} onSelect={setGenre} />
           </div>
         )}
 
