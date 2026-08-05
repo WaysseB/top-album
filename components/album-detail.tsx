@@ -8,6 +8,8 @@ import { ExternalLink, Pencil, Trash2, X } from "lucide-react"
 type Props = {
   album: Album | null
   rank: number
+  /** Les actions d'edition ne sont rendues que pour l'administrateur connecte. */
+  isAdmin: boolean
   onClose: () => void
   onEdit: () => void
   onDelete: () => void
@@ -22,7 +24,7 @@ function coverGradient(seed: string): string {
   return `linear-gradient(145deg, oklch(0.32 0.09 ${hue}), oklch(0.18 0.05 ${(hue + 60) % 360}))`
 }
 
-export function AlbumDetail({ album, rank, onClose, onEdit, onDelete }: Props) {
+export function AlbumDetail({ album, rank, isAdmin, onClose, onEdit, onDelete }: Props) {
   if (!album) return null
 
   const initials = album.title
@@ -117,20 +119,22 @@ export function AlbumDetail({ album, rank, onClose, onEdit, onDelete }: Props) {
               </div>
             )}
 
-            <div className="mt-1 flex gap-2">
-              <Button variant="secondary" className="flex-1" onClick={onEdit}>
-                <Pencil className="h-4 w-4" />
-                Modifier
-              </Button>
-              <Button
-                variant="ghost"
-                className="text-destructive hover:text-destructive"
-                onClick={onDelete}
-                aria-label="Supprimer l'album"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
+            {isAdmin && (
+              <div className="mt-1 flex gap-2">
+                <Button variant="secondary" className="flex-1" onClick={onEdit}>
+                  <Pencil className="h-4 w-4" />
+                  Modifier
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="text-destructive hover:text-destructive"
+                  onClick={onDelete}
+                  aria-label="Supprimer l'album"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </div>

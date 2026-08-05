@@ -1,5 +1,6 @@
 import type { AlbumList } from "@/lib/albums"
 import { AlbumsView } from "@/components/albums-view"
+import { isAdmin } from "@/lib/auth/session"
 import { countByList, listAlbums } from "@/lib/supabase/albums"
 import { isSupabaseConfigured } from "@/lib/supabase/server"
 
@@ -31,8 +32,8 @@ export async function AlbumsPage({ list }: { list: AlbumList }) {
   }
 
   try {
-    const [albums, counts] = await Promise.all([listAlbums(list), countByList()])
-    return <AlbumsView list={list} initialAlbums={albums} counts={counts} />
+    const [albums, counts, admin] = await Promise.all([listAlbums(list), countByList(), isAdmin()])
+    return <AlbumsView list={list} initialAlbums={albums} counts={counts} isAdmin={admin} />
   } catch (error) {
     console.error(`[albums] chargement de la liste ${list}`, error)
     return (

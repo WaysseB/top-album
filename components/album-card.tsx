@@ -1,18 +1,11 @@
 "use client"
 
 import type { Album } from "@/lib/albums"
-import { GripVertical } from "lucide-react"
 
 type Props = {
   album: Album
   rank: number
-  editMode: boolean
-  isDragging: boolean
-  isDragOver: boolean
   onOpen: () => void
-  onDragStart: () => void
-  onDragEnter: () => void
-  onDragEnd: () => void
 }
 
 function coverGradient(seed: string): string {
@@ -25,17 +18,7 @@ function coverGradient(seed: string): string {
   return `linear-gradient(145deg, oklch(0.32 0.09 ${hue}), oklch(0.18 0.05 ${(hue + 60) % 360}))`
 }
 
-export function AlbumCard({
-  album,
-  rank,
-  editMode,
-  isDragging,
-  isDragOver,
-  onOpen,
-  onDragStart,
-  onDragEnter,
-  onDragEnd,
-}: Props) {
+export function AlbumCard({ album, rank, onOpen }: Props) {
   const initials = album.title
     .split(" ")
     .slice(0, 2)
@@ -53,15 +36,8 @@ export function AlbumCard({
   return (
     <button
       type="button"
-      draggable={editMode}
       onClick={onOpen}
-      onDragStart={onDragStart}
-      onDragEnter={onDragEnter}
-      onDragEnd={onDragEnd}
-      onDragOver={(e) => e.preventDefault()}
-      className={`group flex w-full flex-col rounded-md text-left outline-none ring-ring transition-all duration-200 focus-visible:ring-2 ${
-        editMode ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"
-      } ${isDragging ? "scale-95 opacity-40" : ""} ${isDragOver ? "ring-2 ring-primary" : ""}`}
+      className="group flex w-full cursor-pointer flex-col rounded-md text-left outline-none ring-ring transition-all duration-200 focus-visible:ring-2"
       aria-label={label}
     >
       <div className="relative aspect-square w-full overflow-hidden rounded-md bg-card">
@@ -82,20 +58,12 @@ export function AlbumCard({
           </div>
         )}
 
-        {/* Rank badge */}
         <span className="absolute left-2 top-2 flex h-7 min-w-7 items-center justify-center rounded-full bg-background/70 px-1.5 font-mono text-xs font-semibold text-foreground backdrop-blur-sm">
           {rank}
         </span>
-
-        {/* Drag handle indicator in edit mode */}
-        {editMode && (
-          <span className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-background/70 text-foreground backdrop-blur-sm">
-            <GripVertical className="h-4 w-4" aria-hidden="true" />
-          </span>
-        )}
       </div>
 
-      {/* Metadonnees, desormais toujours visibles sous la pochette */}
+      {/* Metadonnees, toujours visibles sous la pochette */}
       <div className="flex flex-col gap-0.5 px-0.5 pt-2">
         <p className="line-clamp-2 text-sm font-semibold leading-snug text-foreground">{album.title}</p>
         <p className="truncate text-xs text-muted-foreground">

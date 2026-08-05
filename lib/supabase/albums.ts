@@ -133,15 +133,3 @@ export async function deleteAlbum(id: string): Promise<void> {
   const { error } = await supabaseWrite().from(TABLE).delete().eq("id", assertUuid(id))
   if (error) fail("Suppression de l'album impossible", error)
 }
-
-/**
- * Applique un nouvel ordre : `ids` doit contenir les albums d'UNE liste,
- * dans l'ordre voulu. La fonction SQL affecte les positions 1..N.
- */
-export async function reorderAlbums(ids: string[]): Promise<void> {
-  const clean = ids.map(assertUuid)
-  if (clean.length === 0) return
-
-  const { error } = await supabaseWrite().rpc("reorder_albums", { ids: clean })
-  if (error) fail("Reordonnancement impossible", error)
-}

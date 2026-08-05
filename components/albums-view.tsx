@@ -1,24 +1,28 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
+import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { useAlbums } from "@/hooks/use-albums"
 import { LIST_LABELS, LIST_TAB_LABELS, type Album, type AlbumInput, type AlbumList, type ListCounts } from "@/lib/albums"
+import { logoutAction } from "@/app/actions"
 import { AlbumCard } from "@/components/album-card"
 import { AlbumForm } from "@/components/album-form"
 import { AlbumDetail } from "@/components/album-detail"
+import { AlbumSearch } from "@/components/album-search"
 import { ListTabs } from "@/components/list-tabs"
-import { Button } from "@/components/ui/button"
-import { buildAlbumsExport, exportFilename } from "@/lib/export-albums"
-import { ListOrdered, Plus, Check, Download } from "lucide-react"
+import { Button, buttonVariants } from "@/components/ui/button"
+import { LogIn, LogOut, Plus } from "lucide-react"
 
 type Props = {
   list: AlbumList
   initialAlbums: Album[]
   counts: ListCounts
+  isAdmin: boolean
 }
 
 const SUBTITLES: Record<AlbumList, string> = {
-  top: "survolez une pochette pour un aperçu, cliquez pour les détails.",
+  top: "cliquez sur une pochette pour les détails et l'écoute.",
   wannabe: "les albums à découvrir, en attente d'une place dans le top.",
 }
 
@@ -27,27 +31,42 @@ const EMPTY_STATES: Record<AlbumList, string> = {
   wannabe: "Aucun album en attente.",
 }
 
-export function AlbumsView({ list, initialAlbums, counts }: Props) {
-  const { albums, pending, error, clearError, addAlbum, updateAlbum, removeAlbum, reorder, persistOrder } =
-    useAlbums(initialAlbums)
+/** Repli des accents et de la casse, pour une recherche tolerante. */
+function fold(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .toLowerCase()
+    .trim()
+}
 
-  const [editMode, setEditMode] = useState(false)
+export function AlbumsView({ list, initialAlbums, counts, isAdmin }: Props) {
+  const router = useRouter()
+  const { albums, pending, error, clearError, addAlbum, updateAlbum, removeAlbum } = useAlbums(initialAlbums)
+
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Album | null>(null)
   const [detailId, setDetailId] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
-
-  const dragIndex = useRef<number | null>(null)
-  const [dragging, setDragging] = useState<number | null>(null)
-  const [dragOver, setDragOver] = useState<number | null>(null)
+  const [query, setQuery] = useState("")
 
   // Une erreur remontee par le serveur remplace le message de succes.
   useEffect(() => {
     if (error) setNotice(null)
   }, [error])
 
-  const detailIndex = albums.findIndex((a) => a.id === detailId)
-  const detailAlbum = detailIndex >= 0 ? albums[detailIndex] : null
+  // Le rang est fige sur la liste complete : filtrer ne doit pas renumeroter.
+  const ranked = useMemo(() => albums.map((album, index) => ({ album, rank: index + 1 })), [albums])
+
+  const visible = useMemo(() => {
+    const needle = fold(query)
+    if (!needle) return ranked
+    return ranked.filter(
+      ({ album }) => fold(album.title).includes(needle) || fold(album.artist).includes(needle),
+    )
+  }, [ranked, query])
+
+  const detailEntry = ranked.find(({ album }) => album.id === detailId) ?? null
 
   const openAdd = () => {
     setEditing(null)
@@ -72,37 +91,9 @@ export function AlbumsView({ list, initialAlbums, counts }: Props) {
     }
   }
 
-  const handleExport = () => {
-    try {
-      const json = JSON.stringify(buildAlbumsExport(albums, LIST_LABELS[list]), null, 2)
-      const blob = new Blob([json], { type: "application/json" })
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement("a")
-      link.href = url
-      link.download = exportFilename(list)
-      link.click()
-      URL.revokeObjectURL(url)
-      setNotice(`Liste exportée (${albums.length} album${albums.length > 1 ? "s" : ""}).`)
-    } catch {
-      window.alert("Export impossible.")
-    }
-  }
-
-  const handleDragEnter = (index: number) => {
-    if (dragIndex.current === null || dragIndex.current === index) return
-    reorder(dragIndex.current, index)
-    dragIndex.current = index
-    setDragging(index)
-    setDragOver(index)
-  }
-
-  // L'ordre n'est envoye en base qu'une fois, au relachement de la pochette.
-  const handleDragEnd = () => {
-    const moved = dragIndex.current !== null
-    dragIndex.current = null
-    setDragging(null)
-    setDragOver(null)
-    if (moved) void persistOrder()
+  const handleLogout = async () => {
+    await logoutAction()
+    router.refresh()
   }
 
   return (
@@ -120,28 +111,29 @@ export function AlbumsView({ list, initialAlbums, counts }: Props) {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={handleExport} disabled={albums.length === 0}>
-              <Download className="h-4 w-4" />
-              Exporter
-            </Button>
-            <Button
-              variant={editMode ? "default" : "outline"}
-              onClick={() => setEditMode((v) => !v)}
-              aria-pressed={editMode}
-              disabled={albums.length < 2}
-            >
-              {editMode ? <Check className="h-4 w-4" /> : <ListOrdered className="h-4 w-4" />}
-              {editMode ? "Terminer" : "Réorganiser"}
-            </Button>
-            <Button onClick={openAdd}>
-              <Plus className="h-4 w-4" />
-              Ajouter
-            </Button>
+            {isAdmin ? (
+              <>
+                <Button variant="outline" onClick={() => void handleLogout()}>
+                  <LogOut className="h-4 w-4" />
+                  Déconnexion
+                </Button>
+                <Button onClick={openAdd}>
+                  <Plus className="h-4 w-4" />
+                  Ajouter
+                </Button>
+              </>
+            ) : (
+              <Link href="/login" className={buttonVariants({ variant: "outline" })}>
+                <LogIn className="h-4 w-4" />
+                Connexion
+              </Link>
+            )}
           </div>
         </header>
 
-        <div className="mb-6">
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <ListTabs counts={counts} />
+          <AlbumSearch value={query} onChange={setQuery} resultCount={visible.length} />
         </div>
 
         {error && (
@@ -174,19 +166,27 @@ export function AlbumsView({ list, initialAlbums, counts }: Props) {
           </div>
         )}
 
-        {editMode && (
-          <div className="mb-5 rounded-lg border border-dashed border-border bg-card/50 px-4 py-3 text-sm text-muted-foreground">
-            Mode réorganisation : glissez-déposez les pochettes pour changer leur classement.
-          </div>
-        )}
-
         {albums.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-border py-24 text-center">
             <p className="text-sm text-muted-foreground">{EMPTY_STATES[list]}</p>
-            <Button onClick={openAdd}>
-              <Plus className="h-4 w-4" />
-              Ajouter un album
-            </Button>
+            {isAdmin && (
+              <Button onClick={openAdd}>
+                <Plus className="h-4 w-4" />
+                Ajouter un album
+              </Button>
+            )}
+          </div>
+        ) : visible.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border py-24 text-center">
+            <p className="text-sm text-muted-foreground">
+              Aucun album ne correspond à « {query} ».
+            </p>
+            <button
+              onClick={() => setQuery("")}
+              className="font-mono text-xs uppercase tracking-widest text-muted-foreground underline underline-offset-4 hover:text-foreground"
+            >
+              Effacer la recherche
+            </button>
           </div>
         ) : (
           <div
@@ -194,43 +194,32 @@ export function AlbumsView({ list, initialAlbums, counts }: Props) {
               pending ? "opacity-70" : ""
             }`}
           >
-            {albums.map((album, index) => (
-              <AlbumCard
-                key={album.id}
-                album={album}
-                rank={index + 1}
-                editMode={editMode}
-                isDragging={dragging === index}
-                isDragOver={dragOver === index && dragging !== index}
-                onOpen={() => (editMode ? undefined : setDetailId(album.id))}
-                onDragStart={() => {
-                  dragIndex.current = index
-                  setDragging(index)
-                }}
-                onDragEnter={() => handleDragEnter(index)}
-                onDragEnd={handleDragEnd}
-              />
+            {visible.map(({ album, rank }) => (
+              <AlbumCard key={album.id} album={album} rank={rank} onOpen={() => setDetailId(album.id)} />
             ))}
           </div>
         )}
       </div>
 
-      <AlbumForm
-        open={formOpen}
-        initial={editing}
-        defaultList={list}
-        onClose={() => setFormOpen(false)}
-        onSubmit={(data) => void handleSubmit(data)}
-      />
+      {isAdmin && (
+        <AlbumForm
+          open={formOpen}
+          initial={editing}
+          defaultList={list}
+          onClose={() => setFormOpen(false)}
+          onSubmit={(data) => void handleSubmit(data)}
+        />
+      )}
 
       <AlbumDetail
-        album={detailAlbum}
-        rank={detailIndex + 1}
+        album={detailEntry?.album ?? null}
+        rank={detailEntry?.rank ?? 0}
+        isAdmin={isAdmin}
         onClose={() => setDetailId(null)}
-        onEdit={() => detailAlbum && openEdit(detailAlbum)}
+        onEdit={() => detailEntry && openEdit(detailEntry.album)}
         onDelete={() => {
-          if (detailAlbum) {
-            void removeAlbum(detailAlbum.id)
+          if (detailEntry) {
+            void removeAlbum(detailEntry.album.id)
             setDetailId(null)
           }
         }}

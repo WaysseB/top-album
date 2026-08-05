@@ -6,7 +6,6 @@ import type { Album, AlbumInput } from "@/lib/albums"
 import {
   createAlbumAction,
   deleteAlbumAction,
-  reorderAlbumsAction,
   updateAlbumAction,
   type ActionResult,
 } from "@/app/actions"
@@ -90,35 +89,6 @@ export function useAlbums(initial: Album[]) {
     [mutate],
   )
 
-  /**
-   * Deplacement local pendant le glisser-deposer. Rien n'est envoye au serveur
-   * ici : `persistOrder` s'en charge une seule fois, au relachement.
-   */
-  const reorder = useCallback((from: number, to: number) => {
-    setAlbums((prev) => {
-      if (from === to || from < 0 || to < 0 || from >= prev.length || to >= prev.length) {
-        return prev
-      }
-      const next = [...prev]
-      const [moved] = next.splice(from, 1)
-      next.splice(to, 0, moved)
-      return next
-    })
-  }, [])
-
-  const persistOrder = useCallback(async () => {
-    const ids = albumsRef.current.map((a) => a.id)
-    const result = await reorderAlbumsAction(ids)
-    if (!result.ok) {
-      setError(result.error)
-      startTransition(() => router.refresh())
-      return false
-    }
-    setError(null)
-    startTransition(() => router.refresh())
-    return true
-  }, [router])
-
   return {
     albums,
     pending,
@@ -127,7 +97,5 @@ export function useAlbums(initial: Album[]) {
     addAlbum,
     updateAlbum,
     removeAlbum,
-    reorder,
-    persistOrder,
   }
 }
