@@ -6,7 +6,6 @@ import type { Album, AlbumInput } from "@/lib/albums"
 import {
   createAlbumAction,
   deleteAlbumAction,
-  importAlbumsAction,
   reorderAlbumsAction,
   updateAlbumAction,
   type ActionResult,
@@ -91,18 +90,6 @@ export function useAlbums(initial: Album[]) {
     [mutate],
   )
 
-  const importAlbums = useCallback(
-    (incoming: AlbumInput[], replace: boolean) =>
-      mutate(
-        (prev) => {
-          const added = incoming.map((a) => ({ ...a, id: tempId() }))
-          return replace ? added : [...prev, ...added]
-        },
-        () => importAlbumsAction(incoming, replace),
-      ),
-    [mutate],
-  )
-
   /**
    * Deplacement local pendant le glisser-deposer. Rien n'est envoye au serveur
    * ici : `persistOrder` s'en charge une seule fois, au relachement.
@@ -140,7 +127,6 @@ export function useAlbums(initial: Album[]) {
     addAlbum,
     updateAlbum,
     removeAlbum,
-    importAlbums,
     reorder,
     persistOrder,
   }

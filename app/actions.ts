@@ -2,13 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 import type { Album, AlbumInput } from "@/lib/albums"
-import {
-  deleteAlbum,
-  importAlbums,
-  insertAlbum,
-  reorderAlbums,
-  updateAlbum,
-} from "@/lib/supabase/albums"
+import { deleteAlbum, insertAlbum, reorderAlbums, updateAlbum } from "@/lib/supabase/albums"
 
 export type ActionResult<T = void> = { ok: true; data: T } | { ok: false; error: string }
 
@@ -41,11 +35,4 @@ export async function deleteAlbumAction(id: string): Promise<ActionResult> {
 
 export async function reorderAlbumsAction(ids: string[]): Promise<ActionResult> {
   return run("reorder", () => reorderAlbums(ids))
-}
-
-export async function importAlbumsAction(
-  inputs: AlbumInput[],
-  replace: boolean,
-): Promise<ActionResult> {
-  return run("import", () => importAlbums(inputs, replace))
 }
