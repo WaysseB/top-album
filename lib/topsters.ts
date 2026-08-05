@@ -31,6 +31,49 @@ function extractYear(obj: UnknownRecord): string {
   return match ? match[1] : ""
 }
 
+// Topsters 3 has no artist field: it stores everything in `title`, formatted
+// as "Artiste - Album". Other tools use a separate `creator`/`artist` key.
+// Surrounding spaces are required so hyphenated names survive ("Alt-J", "At the Drive-In").
+const ARTIST_SEPARATORS = [" - ", " – ", " — "]
+
+/**
+ * Split "Artiste - Album" into its two parts.
+ *
+ * `knownArtist` wins when the file provides one; it is then also stripped from
+ * the beginning of the title when it is repeated there (the case for files we
+ * export ourselves, which write both).
+ */
+function splitArtistTitle(rawTitle: string, knownArtist: string): { artist: string; title: string } {
+  if (knownArtist) {
+    for (const separator of ARTIST_SEPARATORS) {
+      const prefix = knownArtist + separator
+      if (rawTitle.toLowerCase().startsWith(prefix.toLowerCase())) {
+        return { artist: knownArtist, title: rawTitle.slice(prefix.length).trim() }
+      }
+    }
+    return { artist: knownArtist, title: rawTitle }
+  }
+
+  // Cut on the FIRST separator only: "Artiste - Album - Deluxe Edition"
+  // must yield the artist, not swallow half the album name.
+  let cut = -1
+  let width = 0
+  for (const separator of ARTIST_SEPARATORS) {
+    const index = rawTitle.indexOf(separator)
+    if (index > 0 && (cut === -1 || index < cut)) {
+      cut = index
+      width = separator.length
+    }
+  }
+  if (cut === -1) return { artist: "", title: rawTitle }
+
+  const artist = rawTitle.slice(0, cut).trim()
+  const title = rawTitle.slice(cut + width).trim()
+
+  // Un cote vide = ce n'etait pas un separateur artiste/album.
+  return artist && title ? { artist, title } : { artist: "", title: rawTitle }
+}
+
 // Decompress bytes, trying the compression formats Topsters may have used.
 async function inflate(bytes: Uint8Array): Promise<Uint8Array> {
   let lastErr: unknown
@@ -129,17 +172,22 @@ export async function parseTopsters(text: string): Promise<TopstersParseResult> 
       skipped++
       continue
     }
-    const title = firstString(item, ["title", "name", "album", "albumTitle"])
+    const rawTitle = firstString(item, ["title", "name", "album", "albumTitle"])
     const cover = firstString(item, ["coverURL", "src", "cover", "image", "imageURL", "img", "url"])
 
-    if (!title && !cover) {
+    if (!rawTitle && !cover) {
       skipped++
       continue
     }
 
+    const { artist, title } = splitArtistTitle(
+      rawTitle,
+      firstString(item, ["creator", "artist", "subtitle", "artistName", "by"]),
+    )
+
     albums.push({
       title: title || "Sans titre",
-      artist: firstString(item, ["creator", "artist", "subtitle", "artistName", "by"]),
+      artist,
       year: extractYear(item),
       cover,
       note: firstString(item, ["comment", "note"]) || undefined,

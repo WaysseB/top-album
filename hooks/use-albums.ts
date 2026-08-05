@@ -1,56 +1,112 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
-import { type Album, makeId, SEED_ALBUMS, STORAGE_KEY } from "@/lib/albums"
+import { useCallback, useEffect, useRef, useState, useTransition } from "react"
+import { useRouter } from "next/navigation"
+import type { Album, AlbumInput } from "@/lib/albums"
+import {
+  createAlbumAction,
+  deleteAlbumAction,
+  importAlbumsAction,
+  reorderAlbumsAction,
+  updateAlbumAction,
+  type ActionResult,
+} from "@/app/actions"
 
-export function useAlbums() {
-  const [albums, setAlbums] = useState<Album[]>([])
-  const [loaded, setLoaded] = useState(false)
+function tempId(): string {
+  return typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+}
 
-  // Load once on mount
+/**
+ * Etat du classement, synchronise avec Supabase.
+ *
+ * Les mutations sont appliquees immediatement en local (rendu optimiste) puis
+ * confirmees par une Server Action. En cas d'echec, l'etat precedent est
+ * restaure et le message d'erreur est expose via `error`.
+ */
+export function useAlbums(initial: Album[]) {
+  const router = useRouter()
+  const [albums, setAlbums] = useState<Album[]>(initial)
+  const [error, setError] = useState<string | null>(null)
+  const [pending, startTransition] = useTransition()
+
+  // Reference toujours a jour, pour restaurer l'etat en cas d'echec.
+  const albumsRef = useRef(albums)
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY)
-      if (raw) {
-        setAlbums(JSON.parse(raw))
-      } else {
-        setAlbums(SEED_ALBUMS)
+    albumsRef.current = albums
+  }, [albums])
+
+  // Le serveur fait foi : chaque revalidation ecrase l'etat optimiste.
+  useEffect(() => {
+    setAlbums(initial)
+  }, [initial])
+
+  const mutate = useCallback(
+    async (
+      optimistic: (prev: Album[]) => Album[],
+      action: () => Promise<ActionResult<unknown>>,
+    ): Promise<boolean> => {
+      const snapshot = albumsRef.current
+      setAlbums(optimistic)
+
+      const result = await action()
+      if (!result.ok) {
+        setAlbums(snapshot)
+        setError(result.error)
+        return false
       }
-    } catch {
-      setAlbums(SEED_ALBUMS)
-    }
-    setLoaded(true)
-  }, [])
 
-  // Persist on change (after initial load)
-  useEffect(() => {
-    if (!loaded) return
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(albums))
-    } catch {
-      // storage unavailable, ignore
-    }
-  }, [albums, loaded])
+      setError(null)
+      startTransition(() => router.refresh())
+      return true
+    },
+    [router],
+  )
 
-  const addAlbum = useCallback((data: Omit<Album, "id">) => {
-    setAlbums((prev) => [...prev, { ...data, id: makeId() }])
-  }, [])
+  const addAlbum = useCallback(
+    (data: AlbumInput) =>
+      mutate(
+        (prev) => [...prev, { ...data, id: tempId() }],
+        () => createAlbumAction(data),
+      ),
+    [mutate],
+  )
 
-  // Bulk import (e.g. from a Topsters file). When `replace` is true the
-  // current list is discarded, otherwise imported albums are appended.
-  const importAlbums = useCallback((incoming: Omit<Album, "id">[], replace = false) => {
-    const withIds = incoming.map((a) => ({ ...a, id: makeId() }))
-    setAlbums((prev) => (replace ? withIds : [...prev, ...withIds]))
-  }, [])
+  const updateAlbum = useCallback(
+    (id: string, data: AlbumInput) =>
+      mutate(
+        (prev) => prev.map((a) => (a.id === id ? { ...a, ...data } : a)),
+        () => updateAlbumAction(id, data),
+      ),
+    [mutate],
+  )
 
-  const updateAlbum = useCallback((id: string, data: Omit<Album, "id">) => {
-    setAlbums((prev) => prev.map((a) => (a.id === id ? { ...a, ...data } : a)))
-  }, [])
+  const removeAlbum = useCallback(
+    (id: string) =>
+      mutate(
+        (prev) => prev.filter((a) => a.id !== id),
+        () => deleteAlbumAction(id),
+      ),
+    [mutate],
+  )
 
-  const removeAlbum = useCallback((id: string) => {
-    setAlbums((prev) => prev.filter((a) => a.id !== id))
-  }, [])
+  const importAlbums = useCallback(
+    (incoming: AlbumInput[], replace: boolean) =>
+      mutate(
+        (prev) => {
+          const added = incoming.map((a) => ({ ...a, id: tempId() }))
+          return replace ? added : [...prev, ...added]
+        },
+        () => importAlbumsAction(incoming, replace),
+      ),
+    [mutate],
+  )
 
+  /**
+   * Deplacement local pendant le glisser-deposer. Rien n'est envoye au serveur
+   * ici : `persistOrder` s'en charge une seule fois, au relachement.
+   */
   const reorder = useCallback((from: number, to: number) => {
     setAlbums((prev) => {
       if (from === to || from < 0 || to < 0 || from >= prev.length || to >= prev.length) {
@@ -63,5 +119,29 @@ export function useAlbums() {
     })
   }, [])
 
-  return { albums, loaded, addAlbum, importAlbums, updateAlbum, removeAlbum, reorder }
+  const persistOrder = useCallback(async () => {
+    const ids = albumsRef.current.map((a) => a.id)
+    const result = await reorderAlbumsAction(ids)
+    if (!result.ok) {
+      setError(result.error)
+      startTransition(() => router.refresh())
+      return false
+    }
+    setError(null)
+    startTransition(() => router.refresh())
+    return true
+  }, [router])
+
+  return {
+    albums,
+    pending,
+    error,
+    clearError: useCallback(() => setError(null), []),
+    addAlbum,
+    updateAlbum,
+    removeAlbum,
+    importAlbums,
+    reorder,
+    persistOrder,
+  }
 }
