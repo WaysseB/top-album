@@ -178,6 +178,11 @@ export function AlbumsView({ list, albumsByList, counts, isAdmin }: Props) {
 
   const filtered = searching || genre !== null || decade !== null
 
+  // `FacetFilter` s'efface en dessous de deux entrees : le separateur ne doit
+  // apparaitre que si les deux rangees sont effectivement rendues.
+  const showGenres = genreItems.length > 1
+  const showDecades = decadeItems.length > 1
+
   const resetFilters = () => {
     setQuery("")
     setGenre(null)
@@ -258,8 +263,8 @@ export function AlbumsView({ list, albumsByList, counts, isAdmin }: Props) {
           <AlbumSearch value={query} onChange={setQuery} resultCount={visible.length} />
         </div>
 
-        {(genreItems.length > 1 || decadeItems.length > 1) && (
-          <div className="mb-6 flex flex-col gap-2">
+        {(showGenres || showDecades) && (
+          <div className="mb-6 flex flex-col gap-2.5">
             <FacetFilter
               ariaLabel="Filtrer par genre"
               items={genreItems}
@@ -267,6 +272,7 @@ export function AlbumsView({ list, albumsByList, counts, isAdmin }: Props) {
               selected={genre}
               onSelect={setGenre}
             />
+            {showGenres && showDecades && <div className="h-px bg-border/60" aria-hidden="true" />}
             <FacetFilter
               ariaLabel="Filtrer par décennie"
               items={decadeItems}
