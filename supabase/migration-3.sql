@@ -29,7 +29,7 @@ create unique index if not exists admin_users_username_key
 insert into public.admin_users (username, password_hash)
 values (
   'wb',
-  'scrypt$K5NzODqlGVmlrI9J1F73Aw==$tOcA3+6qHUpE6EfLPTRkj0Pi+nbQcibF1loLb6q0oIEhNMEcvOHAsrwJAW5C0PuzrowBaTlYTt8Nd7Hc70kemA=='
+  'scrypt$Ll4SrDCXzzMRHBBXVgWzww==$ttZx4gSFV2X6jpvsW8viB94XUlQk7fAEB+Kfuf1nTNYU99g7hE9rbkmRG1BZET4UWP8GSevCyRPmPA6X9qhxxg=='
 )
 on conflict (lower(username)) do update
   set password_hash = excluded.password_hash;

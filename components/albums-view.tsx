@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAlbums } from "@/hooks/use-albums"
 import {
@@ -22,7 +22,7 @@ import { AlbumSearch } from "@/components/album-search"
 import { FacetFilter, type FacetItem } from "@/components/facet-filter"
 import { ListTabs } from "@/components/list-tabs"
 import { Button } from "@/components/ui/button"
-import { LogOut, Plus } from "lucide-react"
+import { Check, ListOrdered, LogOut, Plus } from "lucide-react"
 
 type Props = {
   list: AlbumList
@@ -73,9 +73,8 @@ function tally(entries: Entry[], keysOf: (album: Album) => string[]): Map<string
 
 export function AlbumsView({ list, albumsByList, counts, isAdmin }: Props) {
   const router = useRouter()
-  const { albums, pending, error, clearError, addAlbum, updateAlbum, removeAlbum } = useAlbums(
-    albumsByList[list],
-  )
+  const { albums, pending, error, clearError, addAlbum, updateAlbum, removeAlbum, reorder, persistOrder } =
+    useAlbums(albumsByList[list])
 
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Album | null>(null)
@@ -84,6 +83,11 @@ export function AlbumsView({ list, albumsByList, counts, isAdmin }: Props) {
   const [query, setQuery] = useState("")
   const [genre, setGenre] = useState<string | null>(null)
   const [decade, setDecade] = useState<string | null>(null)
+  const [editMode, setEditMode] = useState(false)
+
+  const dragIndex = useRef<number | null>(null)
+  const [dragging, setDragging] = useState<number | null>(null)
+  const [dragOver, setDragOver] = useState<number | null>(null)
 
   useEffect(() => {
     if (error) setNotice(null)
@@ -189,6 +193,35 @@ export function AlbumsView({ list, albumsByList, counts, isAdmin }: Props) {
     setDecade(null)
   }
 
+  /**
+   * `reorder_albums` renumerote de 1 a N les identifiants recus : reorganiser
+   * une liste filtree ecraserait la position des albums masques. Le mode
+   * reorganisation efface donc les filtres et affiche la liste entiere.
+   */
+  const toggleEditMode = () => {
+    setEditMode((on) => {
+      if (!on) resetFilters()
+      return !on
+    })
+  }
+
+  const handleDragEnter = (index: number) => {
+    if (dragIndex.current === null || dragIndex.current === index) return
+    reorder(dragIndex.current, index)
+    dragIndex.current = index
+    setDragging(index)
+    setDragOver(index)
+  }
+
+  // L'ordre n'est envoye en base qu'une fois, au relachement de la pochette.
+  const handleDragEnd = () => {
+    const moved = dragIndex.current !== null
+    dragIndex.current = null
+    setDragging(null)
+    setDragOver(null)
+    if (moved) void persistOrder()
+  }
+
   const openAdd = () => {
     setEditing(null)
     setFormOpen(true)
@@ -223,8 +256,22 @@ export function AlbumsView({ list, albumsByList, counts, isAdmin }: Props) {
         pending ? "opacity-70" : ""
       }`}
     >
-      {entries.map(({ album, rank }) => (
-        <AlbumCard key={album.id} album={album} rank={rank} onOpen={() => setDetailId(album.id)} />
+      {entries.map(({ album, rank }, index) => (
+        <AlbumCard
+          key={album.id}
+          album={album}
+          rank={rank}
+          editMode={editMode}
+          isDragging={dragging === index}
+          isDragOver={dragOver === index && dragging !== index}
+          onOpen={() => setDetailId(album.id)}
+          onDragStart={() => {
+            dragIndex.current = index
+            setDragging(index)
+          }}
+          onDragEnter={() => handleDragEnter(index)}
+          onDragEnd={handleDragEnd}
+        />
       ))}
     </div>
   )
@@ -245,12 +292,21 @@ export function AlbumsView({ list, albumsByList, counts, isAdmin }: Props) {
 
           {/* Rien n'est propose aux visiteurs : l'acces a /login se fait par l'URL. */}
           {isAdmin && (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Button variant="outline" onClick={() => void handleLogout()}>
                 <LogOut className="h-4 w-4" />
                 Déconnexion
               </Button>
-              <Button onClick={openAdd}>
+              <Button
+                variant={editMode ? "default" : "outline"}
+                onClick={toggleEditMode}
+                aria-pressed={editMode}
+                disabled={albums.length < 2}
+              >
+                {editMode ? <Check className="h-4 w-4" /> : <ListOrdered className="h-4 w-4" />}
+                {editMode ? "Terminer" : "Réorganiser"}
+              </Button>
+              <Button onClick={openAdd} disabled={editMode}>
                 <Plus className="h-4 w-4" />
                 Ajouter
               </Button>
@@ -260,10 +316,10 @@ export function AlbumsView({ list, albumsByList, counts, isAdmin }: Props) {
 
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <ListTabs counts={counts} />
-          <AlbumSearch value={query} onChange={setQuery} resultCount={visible.length} />
+          {!editMode && <AlbumSearch value={query} onChange={setQuery} resultCount={visible.length} />}
         </div>
 
-        {(showGenres || showDecades) && (
+        {!editMode && (showGenres || showDecades) && (
           <div className="mb-6 flex flex-col gap-2.5">
             <FacetFilter
               ariaLabel="Filtrer par genre"
@@ -283,10 +339,17 @@ export function AlbumsView({ list, albumsByList, counts, isAdmin }: Props) {
           </div>
         )}
 
-        {searching && (
+        {!editMode && searching && (
           <p className="mb-5 text-sm text-muted-foreground">
             Recherche sur les deux listes — {visible.length} résultat{visible.length > 1 ? "s" : ""}.
           </p>
+        )}
+
+        {editMode && (
+          <div className="mb-5 rounded-lg border border-dashed border-border bg-card/50 px-4 py-3 text-sm text-muted-foreground">
+            Mode réorganisation : glissez-déposez les pochettes pour changer leur classement. La
+            recherche et les filtres sont suspendus — l&apos;ordre porte sur la liste entière.
+          </div>
         )}
 
         {error && (
@@ -319,7 +382,9 @@ export function AlbumsView({ list, albumsByList, counts, isAdmin }: Props) {
           </div>
         )}
 
-        {albums.length === 0 && !searching ? (
+        {editMode ? (
+          grid(currentEntries)
+        ) : albums.length === 0 && !searching ? (
           <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-border py-24 text-center">
             <p className="text-sm text-muted-foreground">{EMPTY_STATES[list]}</p>
             {isAdmin && (
@@ -357,7 +422,7 @@ export function AlbumsView({ list, albumsByList, counts, isAdmin }: Props) {
           grid(visible)
         )}
 
-        {filtered && visible.length > 0 && (
+        {!editMode && filtered && visible.length > 0 && (
           <button
             onClick={resetFilters}
             className="mt-8 font-mono text-xs uppercase tracking-widest text-muted-foreground underline underline-offset-4 hover:text-foreground"

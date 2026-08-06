@@ -5,7 +5,7 @@ import type { Album, AlbumInput } from "@/lib/albums"
 import { createSession, destroySession, requireAdmin } from "@/lib/auth/session"
 import { verifyPassword } from "@/lib/auth/password"
 import { findAdminByUsername } from "@/lib/supabase/admin-users"
-import { deleteAlbum, insertAlbum, updateAlbum } from "@/lib/supabase/albums"
+import { deleteAlbum, insertAlbum, reorderAlbums, updateAlbum } from "@/lib/supabase/albums"
 
 export type ActionResult<T = void> = { ok: true; data: T } | { ok: false; error: string }
 
@@ -75,5 +75,12 @@ export async function deleteAlbumAction(id: string): Promise<ActionResult> {
   return run("delete", async () => {
     await requireAdmin()
     return deleteAlbum(id)
+  })
+}
+
+export async function reorderAlbumsAction(ids: string[]): Promise<ActionResult> {
+  return run("reorder", async () => {
+    await requireAdmin()
+    return reorderAlbums(ids)
   })
 }

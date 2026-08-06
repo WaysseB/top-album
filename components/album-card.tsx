@@ -1,11 +1,19 @@
 "use client"
 
 import type { Album } from "@/lib/albums"
+import { GripVertical } from "lucide-react"
 
 type Props = {
   album: Album
   rank: number
   onOpen: () => void
+  /** Mode reorganisation : la carte devient deplacable au lieu d'ouvrir la fiche. */
+  editMode?: boolean
+  isDragging?: boolean
+  isDragOver?: boolean
+  onDragStart?: () => void
+  onDragEnter?: () => void
+  onDragEnd?: () => void
 }
 
 function coverGradient(seed: string): string {
@@ -18,7 +26,17 @@ function coverGradient(seed: string): string {
   return `linear-gradient(145deg, oklch(0.32 0.09 ${hue}), oklch(0.18 0.05 ${(hue + 60) % 360}))`
 }
 
-export function AlbumCard({ album, rank, onOpen }: Props) {
+export function AlbumCard({
+  album,
+  rank,
+  onOpen,
+  editMode = false,
+  isDragging = false,
+  isDragOver = false,
+  onDragStart,
+  onDragEnter,
+  onDragEnd,
+}: Props) {
   const initials = album.title
     .split(" ")
     .slice(0, 2)
@@ -36,15 +54,22 @@ export function AlbumCard({ album, rank, onOpen }: Props) {
   return (
     <button
       type="button"
-      onClick={onOpen}
-      className="group flex w-full cursor-pointer flex-col rounded-md text-left outline-none ring-ring transition-all duration-200 focus-visible:ring-2"
+      draggable={editMode}
+      onClick={editMode ? undefined : onOpen}
+      onDragStart={onDragStart}
+      onDragEnter={onDragEnter}
+      onDragEnd={onDragEnd}
+      onDragOver={(e) => e.preventDefault()}
+      className={`group flex w-full flex-col rounded-md text-left outline-none ring-ring transition-all duration-200 focus-visible:ring-2 ${
+        editMode ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"
+      } ${isDragging ? "scale-95 opacity-40" : ""} ${isDragOver ? "ring-2 ring-primary" : ""}`}
       aria-label={label}
     >
       <div className="relative aspect-square w-full overflow-hidden rounded-md bg-card">
         {album.cover ? (
-          // eslint-disable-next-line @next/next/no-img-element
           // La grille compte jusqu'a 118 pochettes : sans `lazy`, le navigateur
           // les telecharge toutes avant le premier defilement.
+          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={album.cover || "/placeholder.svg"}
             alt={`Pochette de ${album.title}`}
@@ -53,7 +78,9 @@ export function AlbumCard({ album, rank, onOpen }: Props) {
             decoding="async"
             width={300}
             height={300}
-            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+            className={`h-full w-full object-cover transition-transform duration-300 ${
+              editMode ? "" : "group-hover:scale-105"
+            }`}
           />
         ) : (
           <div
@@ -67,6 +94,12 @@ export function AlbumCard({ album, rank, onOpen }: Props) {
         <span className="absolute left-2 top-2 flex h-7 min-w-7 items-center justify-center rounded-full bg-background/70 px-1.5 font-mono text-xs font-semibold text-foreground backdrop-blur-sm">
           {rank}
         </span>
+
+        {editMode && (
+          <span className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-background/70 text-foreground backdrop-blur-sm">
+            <GripVertical className="h-4 w-4" aria-hidden="true" />
+          </span>
+        )}
       </div>
 
       {/* Metadonnees, toujours visibles sous la pochette */}
