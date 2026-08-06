@@ -6,9 +6,12 @@ import { GripVertical } from "lucide-react"
 type Props = {
   album: Album
   rank: number
+  /** Activation de la carte : ouvre la fiche, ou sert au deplacement en mode reorganisation. */
   onOpen: () => void
   /** Mode reorganisation : la carte devient deplacable au lieu d'ouvrir la fiche. */
   editMode?: boolean
+  /** Album selectionne, en attente de sa position de destination. */
+  isPicked?: boolean
   isDragging?: boolean
   isDragOver?: boolean
   onDragStart?: () => void
@@ -31,6 +34,7 @@ export function AlbumCard({
   rank,
   onOpen,
   editMode = false,
+  isPicked = false,
   isDragging = false,
   isDragOver = false,
   onDragStart,
@@ -43,7 +47,7 @@ export function AlbumCard({
     .map((w) => w[0]?.toUpperCase() ?? "")
     .join("")
 
-  const label = [
+  const description = [
     `${album.title}${album.artist ? ` par ${album.artist}` : ""}`,
     `classé numéro ${rank}`,
     album.favoriteTrack ? `titre préféré : ${album.favoriteTrack}` : null,
@@ -51,19 +55,28 @@ export function AlbumCard({
     .filter(Boolean)
     .join(", ")
 
+  const label = editMode
+    ? isPicked
+      ? `${description}. Sélectionné — activez à nouveau pour annuler.`
+      : `${description}. Activez pour déplacer.`
+    : description
+
   return (
     <button
       type="button"
       draggable={editMode}
-      onClick={editMode ? undefined : onOpen}
+      onClick={onOpen}
       onDragStart={onDragStart}
       onDragEnter={onDragEnter}
       onDragEnd={onDragEnd}
       onDragOver={(e) => e.preventDefault()}
       className={`group flex w-full flex-col rounded-md text-left outline-none ring-ring transition-all duration-200 focus-visible:ring-2 ${
         editMode ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"
-      } ${isDragging ? "scale-95 opacity-40" : ""} ${isDragOver ? "ring-2 ring-primary" : ""}`}
+      } ${isDragging ? "scale-95 opacity-40" : ""} ${
+        isPicked ? "scale-95 opacity-60 ring-2 ring-primary" : ""
+      } ${isDragOver ? "ring-2 ring-primary" : ""}`}
       aria-label={label}
+      aria-pressed={editMode ? isPicked : undefined}
     >
       <div className="relative aspect-square w-full overflow-hidden rounded-md bg-card">
         {album.cover ? (

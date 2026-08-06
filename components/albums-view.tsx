@@ -84,6 +84,8 @@ export function AlbumsView({ list, albumsByList, counts, isAdmin }: Props) {
   const [genre, setGenre] = useState<string | null>(null)
   const [decade, setDecade] = useState<string | null>(null)
   const [editMode, setEditMode] = useState(false)
+  /** Id de l'album selectionne au toucher, en attente de sa destination. */
+  const [picked, setPicked] = useState<string | null>(null)
 
   const dragIndex = useRef<number | null>(null)
   const [dragging, setDragging] = useState<number | null>(null)
@@ -199,11 +201,43 @@ export function AlbumsView({ list, albumsByList, counts, isAdmin }: Props) {
    * reorganisation efface donc les filtres et affiche la liste entiere.
    */
   const toggleEditMode = () => {
+    setPicked(null)
     setEditMode((on) => {
       if (!on) resetFilters()
       return !on
     })
   }
+
+  /**
+   * Selection en deux temps, seule mecanique disponible au toucher : le
+   * glisser-deposer HTML5 n'emet pas `dragstart` depuis un doigt.
+   * Premier appui = on prend l'album, second = on le pose a cette position.
+   */
+  const handleActivate = (album: Album, index: number) => {
+    if (!editMode) {
+      setDetailId(album.id)
+      return
+    }
+    if (picked === null || picked === album.id) {
+      setPicked(picked === album.id ? null : album.id)
+      return
+    }
+
+    const from = albums.findIndex((a) => a.id === picked)
+    setPicked(null)
+    if (from < 0 || from === index) return
+
+    const next = [...albums]
+    const [moved] = next.splice(from, 1)
+    next.splice(index, 0, moved)
+
+    reorder(from, index)
+    // L'ordre est calcule ici : `persistOrder` sans argument lirait l'etat
+    // d'avant le deplacement, qui ne sera commite qu'au rendu suivant.
+    void persistOrder(next.map((a) => a.id))
+  }
+
+  const pickedAlbum = picked ? albums.find((a) => a.id === picked) ?? null : null
 
   const handleDragEnter = (index: number) => {
     if (dragIndex.current === null || dragIndex.current === index) return
@@ -262,9 +296,10 @@ export function AlbumsView({ list, albumsByList, counts, isAdmin }: Props) {
           album={album}
           rank={rank}
           editMode={editMode}
+          isPicked={picked === album.id}
           isDragging={dragging === index}
           isDragOver={dragOver === index && dragging !== index}
-          onOpen={() => setDetailId(album.id)}
+          onOpen={() => handleActivate(album, index)}
           onDragStart={() => {
             dragIndex.current = index
             setDragging(index)
@@ -346,9 +381,26 @@ export function AlbumsView({ list, albumsByList, counts, isAdmin }: Props) {
         )}
 
         {editMode && (
-          <div className="mb-5 rounded-lg border border-dashed border-border bg-card/50 px-4 py-3 text-sm text-muted-foreground">
-            Mode réorganisation : glissez-déposez les pochettes pour changer leur classement. La
-            recherche et les filtres sont suspendus — l&apos;ordre porte sur la liste entière.
+          <div
+            role="status"
+            className={`mb-5 rounded-lg border border-dashed px-4 py-3 text-sm ${
+              pickedAlbum
+                ? "border-primary/60 bg-primary/10 text-foreground"
+                : "border-border bg-card/50 text-muted-foreground"
+            }`}
+          >
+            {pickedAlbum ? (
+              <>
+                <span className="font-semibold">« {pickedAlbum.title} »</span> sélectionné — touchez
+                la position de destination, ou touchez-le à nouveau pour annuler.
+              </>
+            ) : (
+              <>
+                Mode réorganisation : touchez un album pour le sélectionner, puis touchez sa
+                nouvelle position. À la souris, le glisser-déposer fonctionne aussi. La recherche et
+                les filtres sont suspendus — l&apos;ordre porte sur la liste entière.
+              </>
+            )}
           </div>
         )}
 

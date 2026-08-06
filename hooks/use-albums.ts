@@ -106,10 +106,15 @@ export function useAlbums(initial: Album[]) {
     })
   }, [])
 
-  const persistOrder = useCallback(async () => {
+  /**
+   * `ids` permet d'envoyer un ordre calcule dans le meme tick que `reorder` :
+   * `albumsRef` n'est mis a jour qu'au rendu suivant, et lire la reference
+   * juste apres un deplacement enverrait l'ordre precedent.
+   */
+  const persistOrder = useCallback(async (ids?: string[]) => {
     // La liste entiere, dans son ordre courant — un sous-ensemble ecraserait
     // les positions des albums absents.
-    const result = await reorderAlbumsAction(albumsRef.current.map((a) => a.id))
+    const result = await reorderAlbumsAction(ids ?? albumsRef.current.map((a) => a.id))
     if (!result.ok) setError(result.error)
     else setError(null)
 
