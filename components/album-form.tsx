@@ -5,6 +5,7 @@ import type React from "react"
 import { useEffect, useState } from "react"
 import { formatGenres, LIST_TAB_LABELS, parseGenres, type Album, type AlbumInput, type AlbumList } from "@/lib/albums"
 import { Button } from "@/components/ui/button"
+import { useModal } from "@/hooks/use-modal"
 import { parseDeezerRef } from "@/lib/deezer"
 import { X } from "lucide-react"
 
@@ -55,6 +56,9 @@ export function AlbumForm({ open, initial, defaultList, onClose, onSubmit }: Pro
     )
   }, [open, initial, defaultList])
 
+  // Appelé avant le retour anticipé : l'ordre des hooks doit rester stable.
+  const dialogRef = useModal(open, onClose)
+
   if (!open) return null
 
   const deezerTouched = form.deezerUrl.trim().length > 0
@@ -86,7 +90,9 @@ export function AlbumForm({ open, initial, defaultList, onClose, onSubmit }: Pro
     // Le defilement porte sur le fond, pas sur le panneau : sur mobile une
     // hauteur en `vh` ignore la barre d'adresse et rognerait le formulaire.
     <div
-      className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-background/80 p-3 backdrop-blur-sm sm:p-4"
+      ref={dialogRef}
+      tabIndex={-1}
+      className="safe-inset fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-background/80 backdrop-blur-sm outline-none"
       role="dialog"
       aria-modal="true"
       aria-label={initial ? "Modifier l'album" : "Ajouter un album"}
@@ -104,7 +110,7 @@ export function AlbumForm({ open, initial, defaultList, onClose, onSubmit }: Pro
             <button
               type="button"
               onClick={onClose}
-              className="shrink-0 rounded-md p-1 text-muted-foreground outline-none ring-ring transition-colors hover:text-foreground focus-visible:ring-2"
+              className="relative shrink-0 rounded-md p-1 text-muted-foreground outline-none ring-ring transition-colors after:absolute after:left-1/2 after:top-1/2 after:h-11 after:w-11 after:-translate-x-1/2 after:-translate-y-1/2 after:content-[''] hover:text-foreground focus-visible:ring-2"
               aria-label="Fermer"
             >
               <X className="h-5 w-5" />

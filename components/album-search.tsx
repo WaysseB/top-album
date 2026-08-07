@@ -29,7 +29,7 @@ export function AlbumSearch({ value, onChange, resultCount }: Props) {
           type="button"
           onClick={() => onChange("")}
           aria-label="Effacer la recherche"
-          className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground outline-none ring-ring transition-colors hover:text-foreground focus-visible:ring-2"
+          className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground outline-none ring-ring transition-colors after:absolute after:left-1/2 after:top-1/2 after:h-11 after:w-11 after:-translate-x-1/2 after:-translate-y-1/2 after:content-[''] hover:text-foreground focus-visible:ring-2"
         >
           <X className="h-4 w-4" />
         </button>

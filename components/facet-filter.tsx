@@ -51,8 +51,10 @@ export function FacetFilter({ label, items, total, selected, onSelect, collapseA
     hidden = items.length - shown.length
   }
 
+  // Le pseudo-élément étend la zone tactile à 44 px de haut sans épaissir la
+  // pastille — sur mobile, une cible de 26 px se rate au pouce.
   const chip = (active: boolean) =>
-    `inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium outline-none ring-ring transition-colors focus-visible:ring-2 ${
+    `relative inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium outline-none ring-ring transition-colors after:absolute after:inset-x-0 after:top-1/2 after:h-11 after:-translate-y-1/2 after:content-[''] focus-visible:ring-2 sm:after:hidden ${
       active
         ? "border-primary bg-primary/15 text-foreground"
         : "border-border bg-secondary text-muted-foreground hover:text-foreground"

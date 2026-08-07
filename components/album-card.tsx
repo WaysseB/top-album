@@ -91,8 +91,9 @@ export function AlbumCard({
             decoding="async"
             width={300}
             height={300}
+            // `motion-safe` : pas de zoom si le système demande moins d'animations.
             className={`h-full w-full object-cover transition-transform duration-300 ${
-              editMode ? "" : "group-hover:scale-105"
+              editMode ? "" : "motion-safe:group-hover:scale-105"
             }`}
           />
         ) : (
@@ -126,8 +127,10 @@ export function AlbumCard({
           <p className="truncate text-xs italic text-muted-foreground/80">♪ {album.favoriteTrack}</p>
         )}
         {album.genres.length > 0 && (
-          // Deux genres au plus : au-dela, la ligne devient du bruit dans la grille.
-          <p className="truncate pt-0.5 font-mono text-[0.65rem] uppercase tracking-wider text-muted-foreground/70">
+          // Masquée sur mobile : à deux colonnes, cinq lignes de texte sous une
+          // vignette de 170 px saturent la grille. Les genres restent dans la fiche.
+          // Deux genres au plus : au-dela, la ligne devient du bruit.
+          <p className="hidden truncate pt-0.5 font-mono text-[0.65rem] uppercase tracking-wider text-muted-foreground/70 sm:block">
             {album.genres.slice(0, 2).join(" · ")}
           </p>
         )}

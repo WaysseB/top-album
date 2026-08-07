@@ -30,6 +30,9 @@ export const viewport: Viewport = {
   // L'application force le thème sombre : les contrôles natifs doivent suivre.
   colorScheme: 'dark',
   themeColor: '#171717',
+  // Indispensable avec la barre d'état translucide : sans cover, iOS n'expose
+  // pas les variables env(safe-area-inset-*) et le contenu passe sous l'encoche.
+  viewportFit: 'cover',
 }
 
 export default function RootLayout({

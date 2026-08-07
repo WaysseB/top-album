@@ -161,5 +161,44 @@
   }
   body {
     @apply bg-background text-foreground;
+
+    /* Installée sur iPhone, l'application s'affiche sous la barre d'état et
+       sous la barre de gestes : sans ces marges, l'en-tête passe derrière
+       l'heure. Les valeurs valent 0 sur un écran sans encoche. */
+    padding-top: env(safe-area-inset-top);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+  }
+
+  /* Les modales sont en position fixe : les marges du body ne s'y appliquent
+     pas, elles doivent gérer les zones sûres elles-mêmes. */
+  .safe-inset {
+    padding-top: max(0.75rem, env(safe-area-inset-top));
+    padding-right: max(0.75rem, env(safe-area-inset-right));
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+    padding-left: max(0.75rem, env(safe-area-inset-left));
+  }
+
+  @media (min-width: 640px) {
+    .safe-inset {
+      padding-top: max(1rem, env(safe-area-inset-top));
+      padding-right: max(1rem, env(safe-area-inset-right));
+      padding-bottom: max(1rem, env(safe-area-inset-bottom));
+      padding-left: max(1rem, env(safe-area-inset-left));
+    }
+  }
+
+  /* Aucune échappatoire au mouvement jusqu'ici : zooms de pochettes,
+     transitions, défilements animés s'imposaient à tout le monde. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }

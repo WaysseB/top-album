@@ -325,15 +325,17 @@ export function AlbumsView({ list, albumsByList, counts, isAdmin }: Props) {
             </p>
           </div>
 
-          {/* Rien n'est propose aux visiteurs : l'acces a /login se fait par l'URL. */}
+          {/* Rien n'est propose aux visiteurs : l'acces a /login se fait par l'URL.
+              Les boutons passent a h-10 sur mobile : 32 px se ratent au pouce. */}
           {isAdmin && (
             <div className="flex flex-wrap items-center gap-2">
-              <Button variant="outline" onClick={() => void handleLogout()}>
+              <Button variant="outline" className="h-10 sm:h-8" onClick={() => void handleLogout()}>
                 <LogOut className="h-4 w-4" />
                 Déconnexion
               </Button>
               <Button
                 variant={editMode ? "default" : "outline"}
+                className="h-10 sm:h-8"
                 onClick={toggleEditMode}
                 aria-pressed={editMode}
                 disabled={albums.length < 2}
@@ -341,7 +343,7 @@ export function AlbumsView({ list, albumsByList, counts, isAdmin }: Props) {
                 {editMode ? <Check className="h-4 w-4" /> : <ListOrdered className="h-4 w-4" />}
                 {editMode ? "Terminer" : "Réorganiser"}
               </Button>
-              <Button onClick={openAdd} disabled={editMode}>
+              <Button className="h-10 sm:h-8" onClick={openAdd} disabled={editMode}>
                 <Plus className="h-4 w-4" />
                 Ajouter
               </Button>

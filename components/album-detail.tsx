@@ -1,6 +1,7 @@
 "use client"
 
 import type { Album } from "@/lib/albums"
+import { useModal } from "@/hooks/use-modal"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { deezerPageUrl, deezerWidgetHeight, deezerWidgetUrl, parseDeezerRef } from "@/lib/deezer"
 import { ExternalLink, Pencil, Trash2, X } from "lucide-react"
@@ -25,6 +26,9 @@ function coverGradient(seed: string): string {
 }
 
 export function AlbumDetail({ album, rank, isAdmin, onClose, onEdit, onDelete }: Props) {
+  // Appelé avant tout retour anticipé : l'ordre des hooks doit rester stable.
+  const dialogRef = useModal(album !== null, onClose)
+
   if (!album) return null
 
   const initials = album.title
@@ -40,7 +44,9 @@ export function AlbumDetail({ album, rank, isAdmin, onClose, onEdit, onDelete }:
     // Le defilement porte sur le fond, pas sur le panneau : sur mobile une
     // hauteur en `vh` ignore la barre d'adresse et rognerait le contenu.
     <div
-      className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-background/80 p-3 backdrop-blur-sm sm:p-4"
+      ref={dialogRef}
+      tabIndex={-1}
+      className="safe-inset fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-background/80 backdrop-blur-sm outline-none"
       role="dialog"
       aria-modal="true"
       aria-label={`Détails de ${album.title}`}
@@ -51,7 +57,9 @@ export function AlbumDetail({ album, rank, isAdmin, onClose, onEdit, onDelete }:
           className="w-full max-w-sm overflow-hidden rounded-xl border border-border bg-card shadow-2xl"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="relative aspect-square w-full">
+          {/* Plafonnée : pleine largeur, la pochette occupait tout l'écran
+              d'un téléphone avant même le lecteur. */}
+          <div className="relative aspect-square max-h-[45vh] w-full overflow-hidden">
             {album.cover ? (
               // eslint-disable-next-line @next/next/no-img-element
               // La fiche s'ouvre a la demande : la pochette est prioritaire ici.
@@ -78,7 +86,8 @@ export function AlbumDetail({ album, rank, isAdmin, onClose, onEdit, onDelete }:
             <button
               type="button"
               onClick={onClose}
-              className="absolute right-3 top-3 rounded-full bg-background/70 p-1.5 text-foreground outline-none ring-ring backdrop-blur-sm transition-colors hover:bg-background focus-visible:ring-2"
+              // La pseudo-élément porte la zone tactile à 44 px sans grossir le bouton.
+              className="absolute right-3 top-3 rounded-full bg-background/70 p-1.5 text-foreground outline-none ring-ring backdrop-blur-sm transition-colors after:absolute after:left-1/2 after:top-1/2 after:h-11 after:w-11 after:-translate-x-1/2 after:-translate-y-1/2 after:content-[''] hover:bg-background focus-visible:ring-2"
               aria-label="Fermer"
             >
               <X className="h-5 w-5" />
