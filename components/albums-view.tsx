@@ -355,17 +355,19 @@ export function AlbumsView({ list, albumsByList, counts, isAdmin }: Props) {
         </div>
 
         {!editMode && (showGenres || showDecades) && (
-          <div className="mb-6 flex flex-col gap-2.5">
+          <div className="mb-6 flex flex-col gap-3">
             <FacetFilter
-              ariaLabel="Filtrer par genre"
+              label="Genres"
               items={genreItems}
               total={forGenres.length}
               selected={genre}
               onSelect={setGenre}
+              collapseAfter={8}
             />
             {showGenres && showDecades && <div className="h-px bg-border/60" aria-hidden="true" />}
+            {/* Les decennies sont peu nombreuses et ordonnees : rien a replier. */}
             <FacetFilter
-              ariaLabel="Filtrer par décennie"
+              label="Décennie"
               items={decadeItems}
               total={forDecades.length}
               selected={decade}
