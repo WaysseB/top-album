@@ -51,10 +51,11 @@ export function FacetFilter({ label, items, total, selected, onSelect, collapseA
     hidden = items.length - shown.length
   }
 
-  // Le pseudo-élément étend la zone tactile à 44 px de haut sans épaissir la
-  // pastille — sur mobile, une cible de 26 px se rate au pouce.
+  // La pastille est reellement plus haute sur mobile, sans pseudo-element :
+  // dans un conteneur `overflow-x-auto`, l'axe vertical passe lui aussi en
+  // defilement, et une zone tactile debordante y ferait glisser la rangee.
   const chip = (active: boolean) =>
-    `relative inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium outline-none ring-ring transition-colors after:absolute after:inset-x-0 after:top-1/2 after:h-11 after:-translate-y-1/2 after:content-[''] focus-visible:ring-2 sm:after:hidden ${
+    `inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-2.5 text-xs font-medium outline-none ring-ring transition-colors focus-visible:ring-2 sm:px-3 sm:py-1 ${
       active
         ? "border-primary bg-primary/15 text-foreground"
         : "border-border bg-secondary text-muted-foreground hover:text-foreground"
