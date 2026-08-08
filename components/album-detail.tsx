@@ -30,11 +30,12 @@ type Props = {
 }
 
 /**
- * Le pseudo-element porte la zone tactile a 44 px sans grossir le bouton,
- * comme sur la croix de fermeture.
+ * Hauteur de 44 px sur telephone — la cible tactile recommandee — ramenee a 32
+ * sur ecran large, ou le pointeur est precis. En bout de liste le bouton reste
+ * en place, desactive : le faire disparaitre decalerait le compteur.
  */
-const arrowClass =
-  "absolute top-1/2 -translate-y-1/2 rounded-full bg-background/70 p-1.5 text-foreground outline-none ring-ring backdrop-blur-sm transition-colors after:absolute after:left-1/2 after:top-1/2 after:h-11 after:w-11 after:-translate-x-1/2 after:-translate-y-1/2 after:content-[''] hover:bg-background focus-visible:ring-2"
+const navClass =
+  "flex h-11 items-center gap-1 rounded-md px-2.5 text-xs font-medium text-muted-foreground outline-none ring-ring transition-colors hover:bg-secondary hover:text-foreground focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-30 sm:h-8"
 
 function coverGradient(seed: string): string {
   let hash = 0
@@ -181,35 +182,41 @@ export function AlbumDetail({
               <X className="h-5 w-5" />
             </button>
 
-            {/* Sur la pochette plutot qu'en pied de fiche : les fleches restent
-                atteignables au pouce sans allonger la modale sur telephone. */}
-            {onPrevious && (
+          </div>
+
+          {/* Barre de navigation sous la pochette, et non par-dessus : une
+              pochette est ce qu'on vient regarder, rien ne doit la recouvrir. */}
+          {(onPrevious || onNext) && (
+            <div className="flex items-center justify-between border-b border-border px-2 py-1.5">
               <button
                 type="button"
                 onClick={onPrevious}
-                className={arrowClass + " left-3"}
+                disabled={!onPrevious}
+                className={navClass}
                 aria-label="Album précédent"
               >
-                <ChevronLeft className="h-5 w-5" />
+                <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+                <span className="hidden sm:inline">Précédent</span>
               </button>
-            )}
-            {onNext && (
+
+              {total > 1 && position > 0 && (
+                <span className="font-mono text-xs tabular-nums text-muted-foreground">
+                  {position} / {total}
+                </span>
+              )}
+
               <button
                 type="button"
                 onClick={onNext}
-                className={arrowClass + " right-3"}
+                disabled={!onNext}
+                className={navClass}
                 aria-label="Album suivant"
               >
-                <ChevronRight className="h-5 w-5" />
+                <span className="hidden sm:inline">Suivant</span>
+                <ChevronRight className="h-4 w-4" aria-hidden="true" />
               </button>
-            )}
-
-            {total > 1 && position > 0 && (
-              <span className="absolute bottom-3 right-3 rounded-full bg-background/70 px-2 py-0.5 font-mono text-xs tabular-nums text-muted-foreground backdrop-blur-sm">
-                {position} / {total}
-              </span>
-            )}
-          </div>
+            </div>
+          )}
 
           <div className="flex flex-col gap-3 p-5">
             <div>

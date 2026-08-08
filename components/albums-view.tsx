@@ -7,11 +7,11 @@ import {
   ALBUM_LISTS,
   decadeLabel,
   decadeOf,
-  LIST_IS_RANKED,
+  LIST_SHOWS_RANK,
   LIST_LABELS,
   LIST_TAB_LABELS,
   NO_DECADE,
-  RANDOM_LISTS,
+  CURATED_LISTS,
   type Album,
   type AlbumInput,
   type AlbumList,
@@ -42,8 +42,10 @@ type Entry = {
 
 const SUBTITLES: Record<AlbumList, string> = {
   top: "cliquez sur une pochette pour les détails et l'écoute.",
-  wannabe: "les albums à découvrir, sans ordre de préférence.",
-  ost: "les musiques de jeux vidéo, sans ordre de préférence.",
+  // Ces listes ont un ordre, simplement il ne s'affiche pas : promettre
+  // « sans ordre de préférence » serait devenu faux.
+  wannabe: "les albums à découvrir.",
+  ost: "les musiques de jeux vidéo.",
   vinyl: "les disques que je possède, synchronisés depuis Discogs.",
 }
 
@@ -117,7 +119,6 @@ export function AlbumsView({ list }: Props) {
     setDetailId(restored.album)
   })
 
-  const ranked = LIST_IS_RANKED[list]
   const otherLists = useMemo(() => ALBUM_LISTS.filter((l) => l !== list), [list])
 
   // Le rang est fige sur la liste complete : filtrer ne renumerote pas.
@@ -205,13 +206,13 @@ export function AlbumsView({ list }: Props) {
 
   /**
    * Le tirage ignore l'onglet — c'est un « surprends-moi », pas un echantillon
-   * de la page — mais pas les listes : voir `RANDOM_LISTS`. Les filtres actifs
+   * de la page — mais pas les listes : voir `CURATED_LISTS`. Les filtres actifs
    * restent respectes, eux : ils expriment une intention.
    */
   const randomPool = useMemo(
     () =>
       allEntries
-        .filter(({ list: from }) => RANDOM_LISTS.includes(from))
+        .filter(({ list: from }) => CURATED_LISTS.includes(from))
         .filter(matchesQuery)
         .filter(matchesGenre)
         .filter(matchesDecade),
@@ -356,7 +357,7 @@ export function AlbumsView({ list }: Props) {
           album={album}
           rank={rank}
           // Un wannabe croise dans les resultats ne doit pas porter de numero.
-          showRank={LIST_IS_RANKED[from]}
+          showRank={LIST_SHOWS_RANK[from]}
           editMode={editMode}
           isPicked={picked === album.id}
           isDragging={dragging === index}
@@ -395,7 +396,7 @@ export function AlbumsView({ list }: Props) {
                 className="h-10 sm:h-8"
                 onClick={pickRandom}
                 disabled={randomPool.length === 0}
-                title={`Un album au hasard parmi ${randomPool.length} — ${RANDOM_LISTS.map(
+                title={`Un album au hasard parmi ${randomPool.length} — ${CURATED_LISTS.map(
                   (l) => LIST_TAB_LABELS[l],
                 ).join(", ")}`}
               >
@@ -410,19 +411,18 @@ export function AlbumsView({ list }: Props) {
                   <LogOut className="h-4 w-4" />
                   Déconnexion
                 </Button>
-                {/* Seul un classement se reorganise. */}
-                {ranked && (
-                  <Button
-                    variant={editMode ? "default" : "outline"}
-                    className="h-10 sm:h-8"
-                    onClick={toggleEditMode}
-                    aria-pressed={editMode}
-                    disabled={albums.length < 2}
-                  >
-                    {editMode ? <Check className="h-4 w-4" /> : <ListOrdered className="h-4 w-4" />}
-                    {editMode ? "Terminer" : "Réorganiser"}
-                  </Button>
-                )}
+                {/* Toutes les listes se reorganisent, y compris celles dont le
+                    numero de rang reste masque. */}
+                <Button
+                  variant={editMode ? "default" : "outline"}
+                  className="h-10 sm:h-8"
+                  onClick={toggleEditMode}
+                  aria-pressed={editMode}
+                  disabled={albums.length < 2}
+                >
+                  {editMode ? <Check className="h-4 w-4" /> : <ListOrdered className="h-4 w-4" />}
+                  {editMode ? "Terminer" : "Réorganiser"}
+                </Button>
                 <Button className="h-10 sm:h-8" onClick={openAdd} disabled={editMode}>
                   <Plus className="h-4 w-4" />
                   Ajouter
@@ -582,7 +582,7 @@ export function AlbumsView({ list }: Props) {
       <AlbumDetail
         album={detailEntry?.album ?? null}
         rank={detailEntry?.rank ?? 0}
-        showRank={detailEntry ? LIST_IS_RANKED[detailEntry.list] : false}
+        showRank={detailEntry ? LIST_SHOWS_RANK[detailEntry.list] : false}
         position={detailIndex >= 0 ? detailIndex + 1 : 0}
         total={neighbours.length}
         onPrevious={detailIndex > 0 ? () => goToNeighbour(-1) : undefined}

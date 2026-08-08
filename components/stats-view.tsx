@@ -4,6 +4,7 @@ import { useMemo, useState } from "react"
 import Link from "next/link"
 import {
   ALBUM_LISTS,
+  CURATED_LISTS,
   decadeLabel,
   LIST_PATHS,
   LIST_TAB_LABELS,
@@ -19,7 +20,9 @@ import { ChevronRight } from "lucide-react"
 type Scope = AlbumList | "all"
 
 const SCOPES: { key: Scope; label: string }[] = [
-  { key: "all", label: "Toutes" },
+  // Le libelle dit ce que le perimetre fait vraiment : « Toutes » aurait laisse
+  // croire que les vinyles y sont comptes.
+  { key: "all", label: "Toutes sauf vinyles" },
   ...ALBUM_LISTS.map((list) => ({ key: list as Scope, label: LIST_TAB_LABELS[list] })),
 ]
 
@@ -187,11 +190,19 @@ function CompletenessRow({ item, total }: { item: Completeness; total: number })
 }
 
 export function StatsView() {
-  const { albumsByList, counts } = useCollection()
+  const { albumsByList, counts, isAdmin } = useCollection()
   const [scope, setScope] = useState<Scope>("all")
 
+  /**
+   * « Toutes » agrege les listes de gout, pas la collection vinyle.
+   *
+   * Celle-ci recoupe largement les autres — 32 albums du Top y figurent aussi —
+   * et l'y inclure comptait deux fois les memes disques : l'artiste le plus
+   * cite, les genres dominants et la decennie dominante en sortaient fausses.
+   * Le perimetre « Vinyles » reste disponible pour la regarder pour elle-meme.
+   */
   const albums = useMemo(
-    () => (scope === "all" ? ALBUM_LISTS.flatMap((list) => albumsByList[list]) : albumsByList[scope]),
+    () => (scope === "all" ? CURATED_LISTS.flatMap((list) => albumsByList[list]) : albumsByList[scope]),
     [albumsByList, scope],
   )
 
@@ -319,19 +330,24 @@ export function StatsView() {
               </ol>
             </section>
 
-            <section className="rounded-xl border border-border bg-card p-4 sm:p-5">
-              <h2 className="mb-1 font-mono text-xs uppercase tracking-widest text-muted-foreground">
-                Fiches complétées
-              </h2>
-              <p className="mb-4 text-xs text-muted-foreground">
-                Ce qu&apos;il reste à renseigner sur ce périmètre.
-              </p>
-              <ul className="flex flex-col gap-1">
-                {stats.completeness.map((item) => (
-                  <CompletenessRow key={item.label} item={item} total={stats.total} />
-                ))}
-              </ul>
-            </section>
+            {/* Reserve a l'administrateur : c'est une file de travail, pas une
+                statistique. Un visiteur n'a que faire de ce qu'il reste a saisir,
+                et l'afficher exposerait les lacunes de la collection. */}
+            {isAdmin && (
+              <section className="rounded-xl border border-border bg-card p-4 sm:p-5">
+                <h2 className="mb-1 font-mono text-xs uppercase tracking-widest text-muted-foreground">
+                  Fiches complétées
+                </h2>
+                <p className="mb-4 text-xs text-muted-foreground">
+                  Ce qu&apos;il reste à renseigner sur ce périmètre.
+                </p>
+                <ul className="flex flex-col gap-1">
+                  {stats.completeness.map((item) => (
+                    <CompletenessRow key={item.label} item={item} total={stats.total} />
+                  ))}
+                </ul>
+              </section>
+            )}
           </>
         )}
 

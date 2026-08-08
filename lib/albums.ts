@@ -29,11 +29,15 @@ export const LIST_PATHS: Record<AlbumList, string> = {
 }
 
 /**
- * Seul le top est un classement : ailleurs, `position` ne sert qu'a fixer un
- * ordre d'affichage stable, et afficher un numero laisserait croire a une
- * hierarchie qui n'existe pas.
+ * Affichage du numero de rang.
+ *
+ * A ne pas confondre avec la possibilite de reordonner, qui vaut pour TOUTES
+ * les listes : chacune suit `position` et se reorganise depuis le front. Seul
+ * le top assume ce classement en le montrant ; ailleurs le numero laisserait
+ * croire a une hierarchie qui n'existe pas, alors que l'ordre n'est qu'un
+ * rangement personnel.
  */
-export const LIST_IS_RANKED: Record<AlbumList, boolean> = {
+export const LIST_SHOWS_RANK: Record<AlbumList, boolean> = {
   top: true,
   wannabe: false,
   ost: false,
@@ -41,11 +45,17 @@ export const LIST_IS_RANKED: Record<AlbumList, boolean> = {
 }
 
 /**
- * Listes ou puise le bouton « Au hasard ». La collection vinyle en est exclue :
- * c'est un inventaire d'objets possedes, qui recoupe largement les autres
- * listes — le tirage y renverrait souvent un album deja classe ailleurs.
+ * Les listes qui relevent du gout, par opposition a l'inventaire physique.
+ *
+ * La collection vinyle en est exclue : elle recense des objets possedes et
+ * recoupe largement les autres listes. L'y melanger fausserait tout ce qui se
+ * veut representatif — un tirage au hasard y renverrait souvent un album deja
+ * classe ailleurs, et des statistiques globales compteraient deux fois le meme
+ * disque.
+ *
+ * Elle reste bien sur consultable pour elle-meme, onglet et perimetre compris.
  */
-export const RANDOM_LISTS: AlbumList[] = ["top", "wannabe", "ost"]
+export const CURATED_LISTS: AlbumList[] = ["top", "wannabe", "ost"]
 
 export type ListCounts = Record<AlbumList, number>
 

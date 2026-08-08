@@ -3,7 +3,6 @@ import {
   ALBUM_LISTS,
   assertList,
   assertUuid,
-  LIST_IS_RANKED,
   normalizeAlbumInput,
   rowToAlbum,
   type Album,
@@ -44,20 +43,18 @@ function fail(context: string, error: { message: string } | null): never {
 }
 
 /**
- * Le contenu complet d'une liste.
+ * Le contenu complet d'une liste, dans l'ordre choisi.
  *
- * Le top suit `position`, son classement. Les autres listes sont alphabetiques :
- * elles n'ont pas de hierarchie, et un ordre d'insertion donnerait a lire un
- * palmares qui n'existe pas. `position` y reste maintenue pour rester
- * reversible, mais n'est plus utilisee a l'affichage.
+ * Toutes les listes suivent `position` : chacune se reorganise depuis le front.
+ * Seul l'affichage differe — le numero de rang n'est montre que sur le top,
+ * voir `LIST_SHOWS_RANK`.
  */
 export async function listAlbums(list: AlbumList): Promise<Album[]> {
-  const target = assertList(list)
-  const query = supabaseRead().from(TABLE).select(ALBUM_COLUMNS).eq("list", target)
-
-  const { data, error } = LIST_IS_RANKED[target]
-    ? await query.order("position", { ascending: true })
-    : await query.order("artist", { ascending: true }).order("title", { ascending: true })
+  const { data, error } = await supabaseRead()
+    .from(TABLE)
+    .select(ALBUM_COLUMNS)
+    .eq("list", assertList(list))
+    .order("position", { ascending: true })
 
   if (error) fail("Lecture des albums impossible", error)
   return (data as AlbumRow[]).map(rowToAlbum)
