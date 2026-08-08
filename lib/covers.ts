@@ -1,7 +1,6 @@
 import "server-only"
 
 import { createHash } from "node:crypto"
-import sharp from "sharp"
 import { supabaseWrite } from "@/lib/supabase/server"
 
 export const COVER_BUCKET = "covers"
@@ -95,6 +94,17 @@ export async function ingestCover(sourceUrl: string): Promise<CoverIngestion> {
     }
 
     const original = await download(sourceUrl)
+
+    /**
+     * `sharp` est charge ici, et non en tete de module.
+     *
+     * C'est une bibliotheque native volumineuse, et ce fichier est atteint par
+     * la chaine d'import du layout : importe statiquement, elle etait chargee au
+     * demarrage de chaque instance serveur — donc a chaque affichage de page —
+     * alors qu'elle ne sert qu'a l'ajout ou la modification d'un album.
+     */
+    const { default: sharp } = await import("sharp")
+
     const webp = await sharp(original)
       // `withoutEnlargement` : une pochette deja petite n'est pas etiree.
       .resize(COVER_SIZE, COVER_SIZE, { fit: "cover", withoutEnlargement: true })
