@@ -79,7 +79,8 @@ export function AlbumDetail({
               <img
                 src={album.cover || "/placeholder.svg"}
                 alt={`Pochette de ${album.title}`}
-                crossOrigin="anonymous"
+                // Voir AlbumCard : le CDN Discogs refuse `Referer` et CORS.
+                referrerPolicy="no-referrer"
                 decoding="async"
                 width={300}
                 height={300}
@@ -130,6 +131,11 @@ export function AlbumDetail({
               </p>
               {album.favoriteTrack && (
                 <p className="mt-1 text-sm italic text-muted-foreground/90">♪ {album.favoriteTrack}</p>
+              )}
+              {album.format && (
+                <p className="mt-1 font-mono text-xs uppercase tracking-wider text-muted-foreground/80">
+                  {album.format}
+                </p>
               )}
               {album.genres.length > 0 && (
                 <div className="mt-2.5 flex flex-wrap gap-1.5">

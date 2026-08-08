@@ -89,7 +89,10 @@ export function AlbumCard({
           <img
             src={album.cover || "/placeholder.svg"}
             alt={`Pochette de ${album.title}`}
-            crossOrigin="anonymous"
+            // Le CDN Discogs refuse les requetes portant un `Referer` etranger,
+            // et ne renvoie pas d'en-tete CORS : `crossOrigin` ferait echouer le
+            // chargement pur et simple. Rien ici ne lit les pixels de l'image.
+            referrerPolicy="no-referrer"
             loading="lazy"
             decoding="async"
             width={300}
@@ -130,6 +133,9 @@ export function AlbumCard({
         </p>
         {album.favoriteTrack && (
           <p className="truncate text-xs italic text-muted-foreground/80">♪ {album.favoriteTrack}</p>
+        )}
+        {album.format && (
+          <p className="truncate text-xs text-muted-foreground/80">{album.format}</p>
         )}
         {album.genres.length > 0 && (
           // Masquée sur mobile : à deux colonnes, cinq lignes de texte sous une

@@ -44,12 +44,14 @@ const SUBTITLES: Record<AlbumList, string> = {
   top: "cliquez sur une pochette pour les détails et l'écoute.",
   wannabe: "les albums à découvrir, sans ordre de préférence.",
   ost: "les musiques de jeux vidéo, sans ordre de préférence.",
+  vinyl: "les disques que je possède, synchronisés depuis Discogs.",
 }
 
 const EMPTY_STATES: Record<AlbumList, string> = {
   top: "Aucun album pour le moment.",
   wannabe: "Aucun album en attente.",
   ost: "Aucune bande originale pour le moment.",
+  vinyl: "Aucun vinyle : lancez la synchronisation Discogs.",
 }
 
 /** Repli des accents et de la casse, pour une recherche tolerante. */

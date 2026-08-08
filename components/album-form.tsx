@@ -37,6 +37,7 @@ const EMPTY = {
   spotifyUrl: "",
   appleMusicUrl: "",
   genres: "",
+  format: "",
 }
 
 export function AlbumForm({ open, initial, defaultList, onClose, onSubmit }: Props) {
@@ -59,6 +60,7 @@ export function AlbumForm({ open, initial, defaultList, onClose, onSubmit }: Pro
             spotifyUrl: initial.spotifyUrl ?? "",
             appleMusicUrl: initial.appleMusicUrl ?? "",
             genres: formatGenres(initial.genres),
+            format: initial.format ?? "",
           }
         : EMPTY,
     )
@@ -87,6 +89,7 @@ export function AlbumForm({ open, initial, defaultList, onClose, onSubmit }: Pro
       spotifyUrl: form.spotifyUrl.trim() || undefined,
       appleMusicUrl: form.appleMusicUrl.trim() || undefined,
       genres: parseGenres(form.genres),
+      format: form.format.trim() || undefined,
     })
     onClose()
   }
@@ -215,6 +218,25 @@ export function AlbumForm({ open, initial, defaultList, onClose, onSubmit }: Pro
                   ))}
                 </select>
               </div>
+              {/* Le support ne concerne que la collection physique : partout
+                  ailleurs, ce champ n'aurait rien a decrire. */}
+              {list === "vinyl" && (
+                <div className="flex flex-col gap-1.5 sm:col-span-2">
+                  <label htmlFor="format" className="text-xs font-medium text-muted-foreground">
+                    Support
+                  </label>
+                  <input
+                    id="format"
+                    className={field}
+                    value={form.format}
+                    onChange={(e) => setForm((f) => ({ ...f, format: e.target.value }))}
+                    placeholder="Ex. 2×Vinyl, LP, Album, Reissue"
+                  />
+                  <p className="text-xs text-muted-foreground/70">
+                    Renseigné par la synchronisation Discogs, écrasé à chaque exécution.
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="flex flex-col gap-1.5">

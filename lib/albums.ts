@@ -1,12 +1,16 @@
-/** Le top assume, la liste d'attente, et les musiques de jeux video. */
-export type AlbumList = "top" | "wannabe" | "ost"
+/**
+ * Le top assume, la liste d'attente, les musiques de jeux video, et la
+ * collection vinyle — celle-ci synchronisee depuis Discogs, pas saisie a la main.
+ */
+export type AlbumList = "top" | "wannabe" | "ost" | "vinyl"
 
-export const ALBUM_LISTS: AlbumList[] = ["top", "wannabe", "ost"]
+export const ALBUM_LISTS: AlbumList[] = ["top", "wannabe", "ost", "vinyl"]
 
 export const LIST_LABELS: Record<AlbumList, string> = {
   top: "Mon Top Albums",
   wannabe: "Wannabe",
   ost: "OST de jeux vidéo",
+  vinyl: "Mes vinyles",
 }
 
 /** Libelle court, pour les onglets. */
@@ -14,12 +18,14 @@ export const LIST_TAB_LABELS: Record<AlbumList, string> = {
   top: "Top",
   wannabe: "Wannabe",
   ost: "OST",
+  vinyl: "Vinyles",
 }
 
 export const LIST_PATHS: Record<AlbumList, string> = {
   top: "/",
   wannabe: "/wannabe",
   ost: "/ost",
+  vinyl: "/vinyles",
 }
 
 /**
@@ -31,6 +37,7 @@ export const LIST_IS_RANKED: Record<AlbumList, boolean> = {
   top: true,
   wannabe: false,
   ost: false,
+  vinyl: false,
 }
 
 export type ListCounts = Record<AlbumList, number>
@@ -51,6 +58,11 @@ export type Album = {
   appleMusicUrl?: string
   /** Pre-rempli depuis Deezer par un script, corrigeable dans le formulaire. */
   genres: string[]
+  /**
+   * Support physique, tel que decrit par Discogs : « 2×Vinyl, LP, Album,
+   * Reissue ». Vide hors collection vinyle.
+   */
+  format?: string
 }
 
 /** Un album tel que saisi dans le formulaire : sans id, celui-ci est genere en base. */
@@ -70,11 +82,12 @@ export type AlbumRow = {
   spotify_url: string | null
   apple_music_url: string | null
   genres: string[] | null
+  format: string | null
   position: number
 }
 
 export const ALBUM_COLUMNS =
-  "id, list, title, artist, year, cover, note, favorite_track, deezer_url, spotify_url, apple_music_url, genres, position"
+  "id, list, title, artist, year, cover, note, favorite_track, deezer_url, spotify_url, apple_music_url, genres, format, position"
 
 export function rowToAlbum(row: AlbumRow): Album {
   return {
@@ -90,6 +103,7 @@ export function rowToAlbum(row: AlbumRow): Album {
     spotifyUrl: row.spotify_url ?? undefined,
     appleMusicUrl: row.apple_music_url ?? undefined,
     genres: row.genres ?? [],
+    format: row.format ?? undefined,
   }
 }
 
@@ -128,6 +142,7 @@ export function normalizeAlbumInput(input: AlbumInput): AlbumInput {
 
   const note = clean(input.note, MAX_NOTE)
   const favoriteTrack = clean(input.favoriteTrack, MAX_TEXT)
+  const format = clean(input.format, MAX_TEXT)
 
   return {
     list: assertList(input.list),
@@ -141,6 +156,7 @@ export function normalizeAlbumInput(input: AlbumInput): AlbumInput {
     spotifyUrl: cleanUrl(input.spotifyUrl) || undefined,
     appleMusicUrl: cleanUrl(input.appleMusicUrl) || undefined,
     genres: parseGenres(formatGenres(input.genres)),
+    format: format || undefined,
   }
 }
 

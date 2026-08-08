@@ -23,12 +23,13 @@ export default async function Page() {
   // Tout est charge puis agrege cote client : a l'echelle de quelques centaines
   // d'albums, cela evite sept requetes d'agregation et rend le selecteur de
   // perimetre instantane.
-  const [top, wannabe, ost, counts] = await Promise.all([
+  const [top, wannabe, ost, vinyl, counts] = await Promise.all([
     listAlbums("top"),
     listAlbums("wannabe"),
     listAlbums("ost"),
+    listAlbums("vinyl"),
     countByList(),
   ])
 
-  return <StatsView albumsByList={{ top, wannabe, ost }} counts={counts} />
+  return <StatsView albumsByList={{ top, wannabe, ost, vinyl }} counts={counts} />
 }

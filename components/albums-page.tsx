@@ -33,15 +33,21 @@ export async function AlbumsPage({ list }: { list: AlbumList }) {
 
   try {
     // Toutes les listes sont chargees : la recherche porte sur l'ensemble.
-    const [top, wannabe, ost, counts, admin] = await Promise.all([
+    const [top, wannabe, ost, vinyl, counts, admin] = await Promise.all([
       listAlbums("top"),
       listAlbums("wannabe"),
       listAlbums("ost"),
+      listAlbums("vinyl"),
       countByList(),
       isAdmin(),
     ])
     return (
-      <AlbumsView list={list} albumsByList={{ top, wannabe, ost }} counts={counts} isAdmin={admin} />
+      <AlbumsView
+        list={list}
+        albumsByList={{ top, wannabe, ost, vinyl }}
+        counts={counts}
+        isAdmin={admin}
+      />
     )
   } catch (error) {
     console.error(`[albums] chargement de la liste ${list}`, error)

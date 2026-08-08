@@ -9,34 +9,39 @@ type Props = {
   counts: ListCounts
 }
 
+const STATS_PATH = "/stats"
+
+/**
+ * Onglet et lien Stats partagent exactement le meme habillage : c'est une barre
+ * de navigation, pas un filtre de liste avec un lien en plus.
+ */
+function tabClass(active: boolean): string {
+  return `flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-4 py-2.5 text-sm font-medium outline-none ring-ring transition-colors focus-visible:ring-2 ${
+    active ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
+  }`
+}
+
 export function ListTabs({ counts }: Props) {
   const pathname = usePathname()
 
   return (
-    // `overflow-x-auto` : trois onglets et leurs compteurs debordent sur un
-    // telephone etroit. Le lien Stats est pousse a droite, hors du groupe.
+    // Le trait de separation est un `box-shadow` interieur, et non une bordure :
+    // avec une bordure, les onglets doivent la chevaucher par un `-mb-px`, et ce
+    // pixel qui depasse suffit a declencher une barre de defilement verticale
+    // des lors que le defilement horizontal est actif.
     <nav
-      aria-label="Listes d'albums"
-      className="flex items-center gap-1 overflow-x-auto border-b border-border"
+      aria-label="Navigation"
+      className="flex items-center gap-1 overflow-x-auto shadow-[inset_0_-1px_0_0_var(--color-border)]"
     >
       {ALBUM_LISTS.map((list) => {
         const href = LIST_PATHS[list]
         const active = pathname === href
 
         return (
-          <Link
-            key={list}
-            href={href}
-            aria-current={active ? "page" : undefined}
-            className={`-mb-px flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium outline-none ring-ring transition-colors focus-visible:ring-2 ${
-              active
-                ? "border-primary text-foreground"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
+          <Link key={list} href={href} aria-current={active ? "page" : undefined} className={tabClass(active)}>
             {LIST_TAB_LABELS[list]}
             <span
-              className={`rounded-full px-1.5 py-0.5 font-mono text-xs ${
+              className={`rounded-full px-1.5 py-0.5 font-mono text-xs tabular-nums ${
                 active ? "bg-primary/15 text-foreground" : "bg-secondary text-muted-foreground"
               }`}
             >
@@ -46,9 +51,14 @@ export function ListTabs({ counts }: Props) {
         )
       })}
 
+      {/* Separateur : les stats portent sur toutes les listes, elles ne sont pas
+          une liste de plus. */}
+      <span className="mx-1 h-5 w-px shrink-0 bg-border" aria-hidden="true" />
+
       <Link
-        href="/stats"
-        className="-mb-px ml-auto flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 border-transparent px-4 py-2.5 text-sm font-medium text-muted-foreground outline-none ring-ring transition-colors hover:text-foreground focus-visible:ring-2"
+        href={STATS_PATH}
+        aria-current={pathname === STATS_PATH ? "page" : undefined}
+        className={tabClass(pathname === STATS_PATH)}
       >
         <BarChart3 className="h-4 w-4" aria-hidden="true" />
         Stats
