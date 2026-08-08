@@ -15,8 +15,8 @@ import {
   type Album,
   type AlbumInput,
   type AlbumList,
-  type ListCounts,
 } from "@/lib/albums"
+import { useCollection } from "@/components/collection-context"
 import { logoutAction } from "@/app/actions"
 import { AlbumCard } from "@/components/album-card"
 import { AlbumForm } from "@/components/album-form"
@@ -28,10 +28,8 @@ import { Button } from "@/components/ui/button"
 import { Check, ListOrdered, LogOut, Plus, Shuffle } from "lucide-react"
 
 type Props = {
+  /** Onglet actif. Le reste vient du layout, via le contexte. */
   list: AlbumList
-  albumsByList: Record<AlbumList, Album[]>
-  counts: ListCounts
-  isAdmin: boolean
 }
 
 /** Un album avec son rang, et la liste d'ou il vient. */
@@ -78,7 +76,8 @@ function tally(entries: Entry[], keysOf: (album: Album) => string[]): Map<string
   return counts
 }
 
-export function AlbumsView({ list, albumsByList, counts, isAdmin }: Props) {
+export function AlbumsView({ list }: Props) {
+  const { albumsByList, counts, isAdmin } = useCollection()
   const router = useRouter()
   const { albums, pending, error, clearError, addAlbum, updateAlbum, removeAlbum, reorder, persistOrder } =
     useAlbums(albumsByList[list])

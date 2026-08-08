@@ -10,18 +10,13 @@ import {
   NO_DECADE,
   type Album,
   type AlbumList,
-  type ListCounts,
 } from "@/lib/albums"
 import { computeStats, type Completeness, type Tally } from "@/lib/stats"
+import { useCollection } from "@/components/collection-context"
 import { ListTabs } from "@/components/list-tabs"
 import { ChevronRight } from "lucide-react"
 
 type Scope = AlbumList | "all"
-
-type Props = {
-  albumsByList: Record<AlbumList, Album[]>
-  counts: ListCounts
-}
 
 const SCOPES: { key: Scope; label: string }[] = [
   { key: "all", label: "Toutes" },
@@ -103,6 +98,15 @@ function CompletenessRow({ item, total }: { item: Completeness; total: number })
   const { label, filled, missing } = item
   const share = total > 0 ? Math.round((filled / total) * 100) : 0
 
+  /**
+   * La liste n'est montee qu'une fois ouverte.
+   *
+   * Rendue systematiquement, elle repetait en HTML des albums deja presents
+   * dans la charge utile de la page — 176 Ko pour des lignes que personne ne
+   * regarde tant qu'il n'a pas clique.
+   */
+  const [open, setOpen] = useState(false)
+
   const bar = (
     <div className="h-1.5 overflow-hidden rounded-full bg-secondary">
       <div
@@ -133,7 +137,7 @@ function CompletenessRow({ item, total }: { item: Completeness; total: number })
 
   return (
     <li>
-      <details className="group">
+      <details className="group" open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
         <summary className="flex cursor-pointer list-none flex-col gap-1 rounded-md py-1.5 outline-none ring-ring focus-visible:ring-2 [&::-webkit-details-marker]:hidden">
           <div className="flex items-baseline justify-between gap-3">
             <span className="flex items-center gap-1.5 text-sm text-foreground">
@@ -154,31 +158,36 @@ function CompletenessRow({ item, total }: { item: Completeness; total: number })
         </summary>
 
         {/* Plafonnee : « Deezer » sur les vinyles, c'est 162 lignes. */}
-        <ul className="mb-2 ml-5 max-h-64 space-y-px overflow-y-auto overscroll-contain rounded-md border border-border bg-background/50 p-1.5">
-          {missing.map((album) => (
-            <li key={album.id}>
-              <Link
-                href={`${LIST_PATHS[album.list]}?q=${encodeURIComponent(album.title)}`}
-                className="flex items-baseline justify-between gap-3 rounded px-2 py-1.5 text-xs outline-none ring-ring transition-colors hover:bg-secondary focus-visible:ring-2"
-              >
-                <span className="min-w-0 truncate text-foreground">
-                  <span className="text-muted-foreground">{album.artist}</span>
-                  {album.artist ? " — " : ""}
-                  {album.title}
-                </span>
-                <span className="shrink-0 font-mono text-[0.65rem] uppercase tracking-wider text-muted-foreground">
-                  {LIST_TAB_LABELS[album.list]}
-                </span>
-              </Link>
-            </li>
-          ))}
+        <ul
+          hidden={!open}
+          className="mb-2 ml-5 max-h-64 space-y-px overflow-y-auto overscroll-contain rounded-md border border-border bg-background/50 p-1.5"
+        >
+          {open &&
+            missing.map((album) => (
+              <li key={album.id}>
+                <Link
+                  href={`${LIST_PATHS[album.list]}?q=${encodeURIComponent(album.title)}`}
+                  className="flex items-baseline justify-between gap-3 rounded px-2 py-1.5 text-xs outline-none ring-ring transition-colors hover:bg-secondary focus-visible:ring-2"
+                >
+                  <span className="min-w-0 truncate text-foreground">
+                    <span className="text-muted-foreground">{album.artist}</span>
+                    {album.artist ? " — " : ""}
+                    {album.title}
+                  </span>
+                  <span className="shrink-0 font-mono text-[0.65rem] uppercase tracking-wider text-muted-foreground">
+                    {LIST_TAB_LABELS[album.list]}
+                  </span>
+                </Link>
+              </li>
+            ))}
         </ul>
       </details>
     </li>
   )
 }
 
-export function StatsView({ albumsByList, counts }: Props) {
+export function StatsView() {
+  const { albumsByList, counts } = useCollection()
   const [scope, setScope] = useState<Scope>("all")
 
   const albums = useMemo(

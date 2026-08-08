@@ -14,6 +14,11 @@ const STATS_PATH = "/stats"
 /**
  * Onglet et lien Stats partagent exactement le meme habillage : c'est une barre
  * de navigation, pas un filtre de liste avec un lien en plus.
+ *
+ * Tous portent `prefetch` : les routes etant dynamiques, le prechargement
+ * automatique de Next ne recupere rien d'utile sans lui. Il ne coute presque
+ * rien depuis que la collection est chargee par le layout partage — le segment
+ * precharge se reduit au composant de page et a son onglet.
  */
 function tabClass(active: boolean): string {
   return `flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-4 py-2.5 text-sm font-medium outline-none ring-ring transition-colors focus-visible:ring-2 ${
@@ -38,7 +43,13 @@ export function ListTabs({ counts }: Props) {
         const active = pathname === href
 
         return (
-          <Link key={list} href={href} aria-current={active ? "page" : undefined} className={tabClass(active)}>
+          <Link
+            key={list}
+            href={href}
+            prefetch
+            aria-current={active ? "page" : undefined}
+            className={tabClass(active)}
+          >
             {LIST_TAB_LABELS[list]}
             <span
               className={`rounded-full px-1.5 py-0.5 font-mono text-xs tabular-nums ${
@@ -57,6 +68,7 @@ export function ListTabs({ counts }: Props) {
 
       <Link
         href={STATS_PATH}
+        prefetch
         aria-current={pathname === STATS_PATH ? "page" : undefined}
         className={tabClass(pathname === STATS_PATH)}
       >

@@ -12,9 +12,32 @@ import {
   type AlbumRow,
   type ListCounts,
 } from "@/lib/albums"
+import { ingestCover, isHostedCover } from "@/lib/covers"
 import { supabaseRead, supabaseWrite } from "@/lib/supabase/server"
 
 const TABLE = "albums"
+
+/**
+ * Rapatrie la pochette dans Supabase Storage avant enregistrement.
+ *
+ * Une URL deja hebergee n'est pas retouchee — c'est le cas d'une modification
+ * qui ne concerne pas la pochette. En cas d'echec du rapatriement, l'URL
+ * distante est conservee telle quelle : l'album doit s'enregistrer quoi qu'il
+ * arrive, `scripts/backfill-covers.mjs` repassera derriere.
+ */
+async function coverColumns(
+  cover: string,
+  currentSource?: string | null,
+): Promise<{ cover: string; cover_source: string | null }> {
+  if (!cover) return { cover: "", cover_source: null }
+  if (isHostedCover(cover)) return { cover, cover_source: currentSource ?? null }
+
+  const result = await ingestCover(cover)
+  if (result.ok) return { cover: result.url, cover_source: cover }
+
+  console.warn(`[covers] rapatriement impossible (${result.reason}) : ${cover}`)
+  return { cover, cover_source: null }
+}
 
 function fail(context: string, error: { message: string } | null): never {
   throw new Error(`${context} : ${error?.message ?? "erreur Supabase inconnue"}`)
@@ -84,7 +107,7 @@ export async function insertAlbum(input: AlbumInput): Promise<Album> {
       title: album.title,
       artist: album.artist,
       year: album.year,
-      cover: album.cover,
+      ...(await coverColumns(album.cover)),
       note: album.note ?? null,
       favorite_track: album.favoriteTrack ?? null,
       deezer_url: album.deezerUrl ?? null,
@@ -108,7 +131,7 @@ export async function updateAlbum(id: string, input: AlbumInput): Promise<Album>
 
   const { data: current, error: readError } = await db
     .from(TABLE)
-    .select("list")
+    .select("list, cover_source")
     .eq("id", albumId)
     .single()
 
@@ -119,7 +142,7 @@ export async function updateAlbum(id: string, input: AlbumInput): Promise<Album>
     title: album.title,
     artist: album.artist,
     year: album.year,
-    cover: album.cover,
+    ...(await coverColumns(album.cover, current?.cover_source as string | null)),
     note: album.note ?? null,
     favorite_track: album.favoriteTrack ?? null,
     deezer_url: album.deezerUrl ?? null,
