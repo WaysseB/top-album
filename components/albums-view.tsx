@@ -126,15 +126,10 @@ export function AlbumsView({ list, albumsByList, counts, isAdmin }: Props) {
     [searching, currentEntries, otherEntries],
   )
 
-  const searched = useMemo(
-    () =>
-      needle
-        ? scope.filter(
-            ({ album }) => fold(album.title).includes(needle) || fold(album.artist).includes(needle),
-          )
-        : scope,
-    [scope, needle],
-  )
+  const matchesQuery = ({ album }: Entry) =>
+    !needle || fold(album.title).includes(needle) || fold(album.artist).includes(needle)
+
+  const searched = useMemo(() => scope.filter(matchesQuery), [scope, needle])
 
   const matchesGenre = (entry: Entry) => !genre || entry.album.genres.includes(genre)
   const matchesDecade = (entry: Entry) => !decade || decadeKey(entry.album) === decade
@@ -192,6 +187,16 @@ export function AlbumsView({ list, albumsByList, counts, isAdmin }: Props) {
   )
   const detailEntry = allEntries.find(({ album }) => album.id === detailId) ?? null
 
+  /**
+   * Le tirage porte sur les quatre listes, quel que soit l'onglet : c'est un
+   * « surprends-moi », pas un echantillon de la page. Les filtres actifs restent
+   * respectes — ils expriment une intention, contrairement a l'onglet.
+   */
+  const randomPool = useMemo(
+    () => allEntries.filter(matchesQuery).filter(matchesGenre).filter(matchesDecade),
+    [allEntries, needle, genre, decade],
+  )
+
   const filtered = searching || genre !== null || decade !== null
 
   const showGenres = genreItems.length > 1
@@ -203,10 +208,9 @@ export function AlbumsView({ list, albumsByList, counts, isAdmin }: Props) {
     setDecade(null)
   }
 
-  /** Tire dans ce qui est affiche : les filtres en cours restent respectes. */
   const pickRandom = () => {
-    if (visible.length === 0) return
-    const entry = visible[Math.floor(Math.random() * visible.length)]
+    if (randomPool.length === 0) return
+    const entry = randomPool[Math.floor(Math.random() * randomPool.length)]
     setDetailId(entry.album.id)
   }
 
@@ -348,7 +352,8 @@ export function AlbumsView({ list, albumsByList, counts, isAdmin }: Props) {
                 variant="outline"
                 className="h-10 sm:h-8"
                 onClick={pickRandom}
-                disabled={visible.length === 0}
+                disabled={randomPool.length === 0}
+                title={`Un album au hasard parmi ${randomPool.length}, toutes listes confondues`}
               >
                 <Shuffle className="h-4 w-4" />
                 Au hasard

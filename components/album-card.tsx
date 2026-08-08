@@ -89,9 +89,9 @@ export function AlbumCard({
           <img
             src={album.cover || "/placeholder.svg"}
             alt={`Pochette de ${album.title}`}
-            // Le CDN Discogs refuse les requetes portant un `Referer` etranger,
-            // et ne renvoie pas d'en-tete CORS : `crossOrigin` ferait echouer le
-            // chargement pur et simple. Rien ici ne lit les pixels de l'image.
+            // Pas de `crossOrigin` : le CDN Discogs sert les pochettes sans
+            // en-tete CORS, et une requete en mode CORS echouerait donc a
+            // l'affichage. Rien ici ne lit les pixels de l'image.
             referrerPolicy="no-referrer"
             loading="lazy"
             decoding="async"

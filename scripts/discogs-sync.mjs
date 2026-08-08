@@ -16,6 +16,7 @@
  *   --raw       affiche la premiere reponse brute, pour verifier le format
  *   --limit N   ne traite que les N premiers disques
  *   --prune     supprime les vinyles retires de la collection Discogs
+ *   --all-formats  inclut les CD, cassettes et autres supports non vinyle
  *   --refresh   reapplique les donnees Discogs sur les fiches existantes
  *   --folder N  dossier Discogs (0 = la collection entiere, par defaut)
  *
@@ -34,6 +35,7 @@ const DRY_RUN = process.argv.includes("--dry-run")
 const RAW = process.argv.includes("--raw")
 const PRUNE = process.argv.includes("--prune")
 const REFRESH = process.argv.includes("--refresh")
+const ALL_FORMATS = process.argv.includes("--all-formats")
 
 function numericArg(flag, fallback) {
   const index = process.argv.indexOf(flag)
@@ -48,23 +50,25 @@ const FOLDER = numericArg("--folder", 0)
 const USERNAME = process.env.DISCOGS_USERNAME
 const TOKEN = process.env.DISCOGS_TOKEN
 
-if (!USERNAME || !TOKEN) {
-  console.error("DISCOGS_USERNAME et DISCOGS_TOKEN sont attendus dans .env.local.")
+if (!USERNAME) {
+  console.error("DISCOGS_USERNAME est attendu dans .env.local.")
   process.exit(1)
 }
 
 /**
- * Discogs impose un `User-Agent` explicite : sans lui, l'API repond 403 quelle
- * que soit la validite du jeton.
+ * Discogs impose un `User-Agent` explicite : sans lui, l'API repond 403.
+ *
+ * Le jeton est facultatif : une collection publique se lit anonymement. Il
+ * devient necessaire si la collection passe en privee, et releve au passage le
+ * quota de 25 a 60 requetes par minute.
  */
 const HEADERS = {
   "User-Agent": "MonTopAlbums/1.0 (+https://v0-topalbums.vercel.app)",
-  Authorization: `Discogs token=${TOKEN}`,
   Accept: "application/json",
+  ...(TOKEN ? { Authorization: `Discogs token=${TOKEN}` } : {}),
 }
 
-/** 60 requetes par minute en authentifie : une page par seconde reste large. */
-const DELAY_MS = 1100
+const DELAY_MS = TOKEN ? 1100 : 2500
 const PER_PAGE = 100
 const MAX_ATTEMPTS = 4
 
@@ -89,7 +93,13 @@ async function discogs(url) {
       continue
     }
 
-    if (response.status === 401) throw new Error("Jeton Discogs refuse (401).")
+    if (response.status === 401 || response.status === 403) {
+      throw new Error(
+        TOKEN
+          ? `Jeton Discogs refuse (${response.status}).`
+          : `Collection privee (${response.status}) : renseignez DISCOGS_TOKEN dans .env.local.`,
+      )
+    }
     if (response.status === 404) throw new Error(`Collection introuvable pour « ${USERNAME} » (404).`)
     throw new Error(`Discogs a repondu ${response.status} sur ${url}`)
   }
@@ -110,12 +120,17 @@ function formatArtists(artists) {
   if (!Array.isArray(artists) || artists.length === 0) return ""
 
   return artists
-    .map((artist, index) => {
-      // `anv` est le nom tel qu'il figure SUR la pochette, quand il differe.
-      const name = cleanArtistName(artist.anv || artist.name)
+    // Un « = » relie la graphie originale a sa traduction (« Daft Punk = ダフト・
+    // パンク ») : ce n'est pas une collaboration, seul le premier nom est retenu.
+    .slice(0, Math.max(1, artists.findIndex((a) => (a.join ?? "").trim() === "=") + 1 || artists.length))
+    .map((artist, index, kept) => {
+      // Le nom canonique prime sur `anv`, le credit imprime sur la pochette :
+      // celui-ci est souvent abrege (« Streisand » pour « Barbra Streisand »),
+      // ce qui couperait l'artiste de ses autres albums dans la recherche.
+      const name = cleanArtistName(artist.name || artist.anv)
       const join = (artist.join ?? "").trim()
-      const last = index === artists.length - 1
-      if (last || !join) return name
+      const last = index === kept.length - 1
+      if (last || !join || join === "=") return name
       // Une virgule se colle au mot precedent, un « & » ou un « feat. » s'espace.
       return join === "," ? `${name},` : `${name} ${join}`
     })
@@ -155,6 +170,28 @@ function formatGenres(basic) {
   return [...seen.values()].slice(0, 6)
 }
 
+/**
+ * Meme convention que pour les artistes : « Random Access Memories = ランダム・
+ * アクセス・メモリーズ » designe un seul et meme disque.
+ */
+function cleanTitle(title) {
+  return (title ?? "").split(" = ")[0].trim().slice(0, 500)
+}
+
+/**
+ * Un exemplaire compte comme vinyle des lors qu'un de ses supports en est un :
+ * les coffrets se declarent « Box Set » en plus de leurs disques.
+ */
+const VINYL_FORMATS = /vinyl|flexi|shellac|acetate|lathe/i
+
+function isVinyl(basic) {
+  return (basic.formats ?? []).some(
+    (format) =>
+      VINYL_FORMATS.test(format.name ?? "") ||
+      (format.descriptions ?? []).some((d) => VINYL_FORMATS.test(d)),
+  )
+}
+
 /** Discogs sert une image de remplacement quand le pressage n'en a pas. */
 function coverOf(basic) {
   const url = basic.cover_image || basic.thumb || ""
@@ -168,7 +205,7 @@ function toRow(item) {
   return {
     discogs_id: item.instance_id,
     list: "vinyl",
-    title: (basic.title ?? "").trim().slice(0, 500),
+    title: cleanTitle(basic.title),
     artist: formatArtists(basic.artists).slice(0, 500),
     // `year` est ici l'annee du PRESSAGE possede, pas celle de la parution
     // originale : sur une collection physique, c'est bien celle-la qui compte.
@@ -236,10 +273,22 @@ async function main() {
   console.log(`Collection Discogs de « ${USERNAME} », dossier ${FOLDER}`)
   if (DRY_RUN) console.log("Mode --dry-run : aucune ecriture.\n")
 
-  const items = await fetchCollection()
-  if (items.length === 0) {
+  const all = await fetchCollection()
+  if (all.length === 0) {
     console.log("\nCollection vide — rien a faire.")
     return
+  }
+
+  // La collection Discogs peut contenir des CD ou des cassettes : cette liste-ci
+  // ne montre que les disques.
+  const items = ALL_FORMATS ? all : all.filter((item) => isVinyl(item.basic_information ?? {}))
+  const skipped = all.length - items.length
+  if (skipped > 0) {
+    console.log(`\n${skipped} exemplaire(s) ecarte(s), support non vinyle (--all-formats pour les inclure) :`)
+    for (const item of all.filter((i) => !isVinyl(i.basic_information ?? {})).slice(0, 10)) {
+      const basic = item.basic_information ?? {}
+      console.log(`  · ${cleanTitle(basic.title)} — ${formatSupport(basic.formats)}`)
+    }
   }
 
   const rows = items.map(toRow)
@@ -284,15 +333,19 @@ async function main() {
   console.log(`  ${orphans.length} retire(s) de Discogs${PRUNE ? " — seront supprimes" : " — conserves (--prune pour supprimer)"}`)
   if (handmade > 0) console.log(`  ${handmade} fiche(s) ajoutee(s) a la main, laissees intactes`)
 
-  for (const row of toInsert.slice(0, 10)) {
+  // Le plan complet n'est deroule qu'en simulation : c'est la qu'on relit les
+  // correspondances avant d'ecrire quoi que ce soit.
+  const preview = DRY_RUN ? Infinity : 10
+
+  for (const row of toInsert.slice(0, preview)) {
     console.log(`  + ${row.artist} — ${row.title}${row.year ? ` (${row.year})` : ""} · ${row.format}`)
   }
-  if (toInsert.length > 10) console.log(`  + … ${toInsert.length - 10} autres`)
+  if (toInsert.length > preview) console.log(`  + … ${toInsert.length - preview} autres`)
 
-  for (const { row, patch } of updates.slice(0, 10)) {
+  for (const { row, patch } of updates.slice(0, preview)) {
     console.log(`  ~ ${row.artist} — ${row.title} : ${Object.keys(patch).join(", ")}`)
   }
-  if (updates.length > 10) console.log(`  ~ … ${updates.length - 10} autres`)
+  if (updates.length > preview) console.log(`  ~ … ${updates.length - preview} autres`)
 
   for (const row of orphans.slice(0, 10)) console.log(`  - ${row.artist} — ${row.title}`)
 

@@ -26,7 +26,9 @@ if (!url) {
   process.exit(1)
 }
 
-const sql = fs.readFileSync(file, "utf8")
+// Le BOM est retire : PowerShell en ajoute un a tout fichier ecrit en UTF-8, et
+// Postgres le lit comme un caractere ordinaire — « syntax error at or near "﻿select" ».
+const sql = fs.readFileSync(file, "utf8").replace(/^﻿/, "")
 console.log(`${file} — ${sql.split("\n").length} lignes\n`)
 
 /**

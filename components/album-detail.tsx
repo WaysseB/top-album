@@ -79,7 +79,7 @@ export function AlbumDetail({
               <img
                 src={album.cover || "/placeholder.svg"}
                 alt={`Pochette de ${album.title}`}
-                // Voir AlbumCard : le CDN Discogs refuse `Referer` et CORS.
+                // Voir AlbumCard : les pochettes Discogs n'ont pas d'en-tete CORS.
                 referrerPolicy="no-referrer"
                 decoding="async"
                 width={300}
