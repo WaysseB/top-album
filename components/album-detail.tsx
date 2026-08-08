@@ -1,16 +1,25 @@
 "use client"
 
+import type React from "react"
+
+import { useEffect, useRef } from "react"
 import type { Album } from "@/lib/albums"
 import { useModal } from "@/hooks/use-modal"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { deezerPageUrl, deezerWidgetHeight, deezerWidgetUrl, parseDeezerRef } from "@/lib/deezer"
-import { ExternalLink, Pencil, Trash2, X } from "lucide-react"
+import { ChevronLeft, ChevronRight, ExternalLink, Pencil, Trash2, X } from "lucide-react"
 
 type Props = {
   album: Album | null
   rank: number
   /** Faux sur les listes non classees. */
   showRank?: boolean
+  /** Rang dans la liste parcourue, pour se reperer : « 12 / 162 ». */
+  position?: number
+  total?: number
+  /** Absent en bout de liste : la commande correspondante disparait. */
+  onPrevious?: () => void
+  onNext?: () => void
   /** Les actions d'edition ne sont rendues que pour l'administrateur connecte. */
   isAdmin: boolean
   onClose: () => void
@@ -19,6 +28,13 @@ type Props = {
   onEdit: () => void
   onDelete: () => void
 }
+
+/**
+ * Le pseudo-element porte la zone tactile a 44 px sans grossir le bouton,
+ * comme sur la croix de fermeture.
+ */
+const arrowClass =
+  "absolute top-1/2 -translate-y-1/2 rounded-full bg-background/70 p-1.5 text-foreground outline-none ring-ring backdrop-blur-sm transition-colors after:absolute after:left-1/2 after:top-1/2 after:h-11 after:w-11 after:-translate-x-1/2 after:-translate-y-1/2 after:content-[''] hover:bg-background focus-visible:ring-2"
 
 function coverGradient(seed: string): string {
   let hash = 0
@@ -33,6 +49,10 @@ export function AlbumDetail({
   album,
   rank,
   showRank = true,
+  position = 0,
+  total = 0,
+  onPrevious,
+  onNext,
   isAdmin,
   onClose,
   onSelectArtist,
@@ -41,6 +61,56 @@ export function AlbumDetail({
 }: Props) {
   // Appelé avant tout retour anticipé : l'ordre des hooks doit rester stable.
   const dialogRef = useModal(album !== null, onClose)
+
+  // Les handlers vivent dans une référence : sans elle, l'abonnement clavier
+  // serait refait à chaque rendu du parent.
+  const navigation = useRef({ onPrevious, onNext })
+  useEffect(() => {
+    navigation.current = { onPrevious, onNext }
+  })
+
+  useEffect(() => {
+    if (!album) return
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      // Une flèche saisie dans un champ appartient au champ, pas à la fiche.
+      const target = event.target as HTMLElement | null
+      if (target?.closest("input, textarea, select")) return
+
+      if (event.key === "ArrowLeft") navigation.current.onPrevious?.()
+      if (event.key === "ArrowRight") navigation.current.onNext?.()
+    }
+
+    window.addEventListener("keydown", onKeyDown)
+    return () => window.removeEventListener("keydown", onKeyDown)
+  }, [album])
+
+  /**
+   * Glissement horizontal, seul équivalent tactile des flèches.
+   *
+   * Le seuil de 60 px et la comparaison avec le déplacement vertical évitent de
+   * changer d'album quand le doigt fait défiler la fiche.
+   */
+  const touch = useRef<{ x: number; y: number } | null>(null)
+
+  const onTouchStart = (event: React.TouchEvent) => {
+    const point = event.touches[0]
+    touch.current = { x: point.clientX, y: point.clientY }
+  }
+
+  const onTouchEnd = (event: React.TouchEvent) => {
+    const start = touch.current
+    touch.current = null
+    if (!start) return
+
+    const point = event.changedTouches[0]
+    const dx = point.clientX - start.x
+    const dy = point.clientY - start.y
+
+    if (Math.abs(dx) < 60 || Math.abs(dx) <= Math.abs(dy)) return
+    if (dx > 0) onPrevious?.()
+    else onNext?.()
+  }
 
   if (!album) return null
 
@@ -69,6 +139,8 @@ export function AlbumDetail({
         <div
           className="w-full max-w-sm overflow-hidden rounded-xl border border-border bg-card shadow-2xl"
           onClick={(e) => e.stopPropagation()}
+          onTouchStart={onTouchStart}
+          onTouchEnd={onTouchEnd}
         >
           {/* Plafonnée : pleine largeur, la pochette occupait tout l'écran
               d'un téléphone avant même le lecteur. */}
@@ -108,6 +180,35 @@ export function AlbumDetail({
             >
               <X className="h-5 w-5" />
             </button>
+
+            {/* Sur la pochette plutot qu'en pied de fiche : les fleches restent
+                atteignables au pouce sans allonger la modale sur telephone. */}
+            {onPrevious && (
+              <button
+                type="button"
+                onClick={onPrevious}
+                className={arrowClass + " left-3"}
+                aria-label="Album précédent"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+            )}
+            {onNext && (
+              <button
+                type="button"
+                onClick={onNext}
+                className={arrowClass + " right-3"}
+                aria-label="Album suivant"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
+            )}
+
+            {total > 1 && position > 0 && (
+              <span className="absolute bottom-3 right-3 rounded-full bg-background/70 px-2 py-0.5 font-mono text-xs tabular-nums text-muted-foreground backdrop-blur-sm">
+                {position} / {total}
+              </span>
+            )}
           </div>
 
           <div className="flex flex-col gap-3 p-5">

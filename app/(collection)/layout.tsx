@@ -1,5 +1,6 @@
-import type { ReactNode } from "react"
+import { Suspense, type ReactNode } from "react"
 import { CollectionProvider } from "@/components/collection-context"
+import { CollectionSkeleton } from "@/components/collection-skeleton"
 import { ErrorPanel } from "@/components/error-panel"
 import { isAdmin } from "@/lib/auth/session"
 import { countByList, listAlbums } from "@/lib/supabase/albums"
@@ -11,25 +12,12 @@ export const dynamic = "force-dynamic"
 /**
  * Charge la collection une fois pour les quatre onglets et les statistiques.
  *
- * Ce layout est volontairement au-dessus des pages plutot que dans chacune
- * d'elles : la recherche porte sur toutes les listes, donc chaque page avait
- * besoin de tout, et rechargeait 205 Ko a chaque changement d'onglet. Ici, le
- * layout est conserve d'une navigation a l'autre et le chargement n'a lieu
- * qu'une fois.
+ * Ce composant est separe du layout pour une raison precise : une frontiere de
+ * suspense ne suspend que ce qu'elle contient. Un `loading.tsx` place a cote du
+ * layout envelopperait ses enfants, pas son `await` — l'ossature ne s'afficherait
+ * jamais, puisque le layout bloque avant de les rendre.
  */
-export default async function CollectionLayout({ children }: { children: ReactNode }) {
-  if (!isSupabaseConfigured()) {
-    return (
-      <ErrorPanel
-        title="Supabase n'est pas configuré"
-        detail={
-          "Les variables NEXT_PUBLIC_SUPABASE_URL et NEXT_PUBLIC_SUPABASE_ANON_KEY sont absentes. " +
-          "En local, récupérez-les depuis Vercel avec : npx vercel env pull .env.local"
-        }
-      />
-    )
-  }
-
+async function Collection({ children }: { children: ReactNode }) {
   try {
     const [top, wannabe, ost, vinyl, counts, admin] = await Promise.all([
       listAlbums("top"),
@@ -56,4 +44,25 @@ export default async function CollectionLayout({ children }: { children: ReactNo
       />
     )
   }
+}
+
+export default function CollectionLayout({ children }: { children: ReactNode }) {
+  if (!isSupabaseConfigured()) {
+    return (
+      <ErrorPanel
+        title="Supabase n'est pas configuré"
+        detail={
+          "Les variables NEXT_PUBLIC_SUPABASE_URL et NEXT_PUBLIC_SUPABASE_ANON_KEY sont absentes. " +
+          "En local, récupérez-les depuis Vercel avec : npx vercel env pull .env.local"
+        }
+      />
+    )
+  }
+
+  // Le squelette part immediatement ; les donnees arrivent en flux ensuite.
+  return (
+    <Suspense fallback={<CollectionSkeleton />}>
+      <Collection>{children}</Collection>
+    </Suspense>
+  )
 }

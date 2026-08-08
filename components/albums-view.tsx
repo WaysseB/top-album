@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useAlbums } from "@/hooks/use-albums"
 import {
   ALBUM_LISTS,
@@ -17,6 +17,7 @@ import {
   type AlbumList,
 } from "@/lib/albums"
 import { useCollection } from "@/components/collection-context"
+import { readUrlState, useUrlState } from "@/hooks/use-url-state"
 import { logoutAction } from "@/app/actions"
 import { AlbumCard } from "@/components/album-card"
 import { AlbumForm } from "@/components/album-form"
@@ -82,17 +83,19 @@ export function AlbumsView({ list }: Props) {
   const { albums, pending, error, clearError, addAlbum, updateAlbum, removeAlbum, reorder, persistOrder } =
     useAlbums(albumsByList[list])
 
-  // Point d'entree depuis la page de statistiques : `?q=` amorce la recherche
-  // pour atterrir directement sur la fiche a completer.
+  // L'etat visible est repris de l'URL a l'arrivee : lien partage, favori,
+  // rafraichissement, ou renvoi depuis la page de statistiques.
+  const pathname = usePathname()
   const searchParams = useSearchParams()
+  const initial = useMemo(() => readUrlState(searchParams.toString()), [])
 
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Album | null>(null)
-  const [detailId, setDetailId] = useState<string | null>(null)
+  const [detailId, setDetailId] = useState<string | null>(initial.album)
   const [notice, setNotice] = useState<string | null>(null)
-  const [query, setQuery] = useState(() => searchParams.get("q") ?? "")
-  const [genre, setGenre] = useState<string | null>(null)
-  const [decade, setDecade] = useState<string | null>(null)
+  const [query, setQuery] = useState(initial.query)
+  const [genre, setGenre] = useState<string | null>(initial.genre)
+  const [decade, setDecade] = useState<string | null>(initial.decade)
   const [editMode, setEditMode] = useState(false)
   /** Id de l'album selectionne au toucher, en attente de sa destination. */
   const [picked, setPicked] = useState<string | null>(null)
@@ -104,6 +107,15 @@ export function AlbumsView({ list }: Props) {
   useEffect(() => {
     if (error) setNotice(null)
   }, [error])
+
+  // L'URL reflete la recherche, les filtres et la fiche ouverte ; le retour
+  // arriere du navigateur referme celle-ci.
+  useUrlState(pathname, { query, genre, decade, album: detailId }, (restored) => {
+    setQuery(restored.query)
+    setGenre(restored.genre)
+    setDecade(restored.decade)
+    setDetailId(restored.album)
+  })
 
   const ranked = LIST_IS_RANKED[list]
   const otherLists = useMemo(() => ALBUM_LISTS.filter((l) => l !== list), [list])
@@ -205,6 +217,27 @@ export function AlbumsView({ list }: Props) {
         .filter(matchesDecade),
     [allEntries, needle, genre, decade],
   )
+
+  /**
+   * Voisinage de la fiche ouverte, pour passer a l'album suivant sans repasser
+   * par la grille.
+   *
+   * On parcourt ce que l'ecran montre. Si l'album n'y figure pas — cas du
+   * tirage au hasard, qui peut ramener un album d'une autre liste — on retombe
+   * sur le vivier du tirage, pour que les fleches restent utilisables.
+   */
+  const neighbours = useMemo(() => {
+    if (visible.some(({ album }) => album.id === detailId)) return visible
+    return randomPool.some(({ album }) => album.id === detailId) ? randomPool : []
+  }, [visible, randomPool, detailId])
+
+  const detailIndex = neighbours.findIndex(({ album }) => album.id === detailId)
+
+  const goToNeighbour = (step: number) => {
+    if (detailIndex < 0) return
+    const next = neighbours[detailIndex + step]
+    if (next) setDetailId(next.album.id)
+  }
 
   const filtered = searching || genre !== null || decade !== null
 
@@ -550,6 +583,10 @@ export function AlbumsView({ list }: Props) {
         album={detailEntry?.album ?? null}
         rank={detailEntry?.rank ?? 0}
         showRank={detailEntry ? LIST_IS_RANKED[detailEntry.list] : false}
+        position={detailIndex >= 0 ? detailIndex + 1 : 0}
+        total={neighbours.length}
+        onPrevious={detailIndex > 0 ? () => goToNeighbour(-1) : undefined}
+        onNext={detailIndex >= 0 && detailIndex < neighbours.length - 1 ? () => goToNeighbour(1) : undefined}
         isAdmin={isAdmin}
         onClose={() => setDetailId(null)}
         onSelectArtist={(artist) => {
