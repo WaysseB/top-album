@@ -27,6 +27,11 @@
  * Les fiches existantes ne sont completees que sur leurs champs vides : les
  * notes, titres preferes et liens d'ecoute saisis a la main survivent a une
  * resynchronisation. `--refresh` force l'ecrasement par les donnees Discogs.
+ *
+ * L'annee enregistree est celle de la PREMIERE PARUTION, lue sur le « master »
+ * Discogs — c'est la seule qui rende les statistiques comparables entre les
+ * quatre listes. L'annee du pressage possede figure sur la ligne de support,
+ * sous la forme « … · pressage 2016 », quand elle differe.
  */
 
 import { createClient } from "@supabase/supabase-js"
@@ -52,6 +57,13 @@ const TOKEN = process.env.DISCOGS_TOKEN
 
 if (!USERNAME) {
   console.error("DISCOGS_USERNAME est attendu dans .env.local.")
+  process.exit(1)
+}
+
+// `--limit` tronque la collection lue : tout ce qui suit passerait pour retire
+// de Discogs, et `--prune` le supprimerait. Les deux ne vont pas ensemble.
+if (PRUNE && LIMIT !== Infinity) {
+  console.error("--prune et --limit sont incompatibles : la collection tronquee ferait passer le reste pour supprime.")
   process.exit(1)
 }
 
@@ -198,22 +210,85 @@ function coverOf(basic) {
   return url.includes("spacer.gif") ? "" : url
 }
 
-function toRow(item) {
+function parseYear(value) {
+  const year = Number.parseInt(value ?? 0, 10)
+  return Number.isFinite(year) && year > 1000 ? String(year) : ""
+}
+
+/**
+ * Un exemplaire de la collection : la ligne a ecrire, et ce qu'il faut garder de
+ * cote pour la completer (l'annee du pressage, et le master qui portera l'annee
+ * de parution originale).
+ */
+function toEntry(item) {
   const basic = item.basic_information ?? {}
-  const year = Number.parseInt(basic.year ?? 0, 10)
+  const pressingYear = parseYear(basic.year)
 
   return {
-    discogs_id: item.instance_id,
-    list: "vinyl",
-    title: cleanTitle(basic.title),
-    artist: formatArtists(basic.artists).slice(0, 500),
-    // `year` est ici l'annee du PRESSAGE possede, pas celle de la parution
-    // originale : sur une collection physique, c'est bien celle-la qui compte.
-    year: Number.isFinite(year) && year > 1000 ? String(year) : "",
-    cover: coverOf(basic),
-    genres: formatGenres(basic),
-    format: formatSupport(basic.formats),
+    masterId: basic.master_id || null,
+    pressingYear,
+    support: formatSupport(basic.formats),
+    row: {
+      discogs_id: item.instance_id,
+      list: "vinyl",
+      title: cleanTitle(basic.title),
+      artist: formatArtists(basic.artists).slice(0, 500),
+      // Remplacee par l'annee de parution originale des que le master est connu.
+      year: pressingYear,
+      cover: coverOf(basic),
+      genres: formatGenres(basic),
+      format: formatSupport(basic.formats),
+    },
   }
+}
+
+/**
+ * Remplace l'annee du pressage par celle de la premiere parution, lue sur le
+ * « master » Discogs.
+ *
+ * Sans cela, une reedition 2016 du « Dark Side of the Moon » se compte dans les
+ * annees 2010 : les statistiques melangent les quatre listes, et le Top est
+ * date, lui, a la premiere parution. L'annee du pressage n'est pas perdue pour
+ * autant, elle rejoint la ligne de support.
+ *
+ * Une requete par master, d'ou l'appel restreint aux fiches reellement ecrites.
+ */
+async function resolveOriginalYears(entries) {
+  const targets = entries.filter((entry) => entry.masterId)
+  if (targets.length === 0) return
+
+  console.log(`\nAnnees de parution originale : ${targets.length} master(s) a interroger…`)
+  const cache = new Map()
+  let resolved = 0
+
+  for (const [index, entry] of targets.entries()) {
+    let year = cache.get(entry.masterId)
+
+    if (year === undefined) {
+      const master = await discogs(`https://api.discogs.com/masters/${entry.masterId}`)
+      year = parseYear(master.year)
+      cache.set(entry.masterId, year)
+      if (index < targets.length - 1) await sleep(DELAY_MS)
+    }
+
+    if (year) {
+      entry.row.year = year
+      resolved += 1
+    }
+
+    if ((index + 1) % 25 === 0) console.log(`  ${index + 1}/${targets.length}`)
+  }
+
+  // Le pressage se lit alors sur la ligne de support, et seulement quand il
+  // differe de la parution — sinon l'information ferait doublon.
+  for (const entry of entries) {
+    if (entry.pressingYear && entry.pressingYear !== entry.row.year) {
+      entry.row.format = `${entry.support} · pressage ${entry.pressingYear}`.slice(0, 500)
+    }
+  }
+
+  const fallback = entries.length - resolved
+  console.log(`  ${resolved} datee(s) a la parution originale, ${fallback} au pressage faute de master.`)
 }
 
 /** Parcourt toutes les pages de la collection. */
@@ -291,12 +366,14 @@ async function main() {
     }
   }
 
-  const rows = items.map(toRow)
+  const entries = items.map(toEntry)
 
-  const incomplete = rows.filter((row) => !row.title || !row.artist)
+  const incomplete = entries.filter(({ row }) => !row.title || !row.artist)
   if (incomplete.length > 0) {
     console.warn(`\n${incomplete.length} disque(s) sans titre ou sans artiste exploitable :`)
-    for (const row of incomplete.slice(0, 5)) console.warn(`  #${row.discogs_id} ${row.artist} — ${row.title}`)
+    for (const { row } of incomplete.slice(0, 5)) {
+      console.warn(`  #${row.discogs_id} ${row.artist} — ${row.title}`)
+    }
   }
 
   const { data: existing, error } = await supabase
@@ -310,6 +387,13 @@ async function main() {
     (existing ?? []).filter((row) => row.discogs_id !== null).map((row) => [Number(row.discogs_id), row]),
   )
 
+  // Une requete par master : on ne date que ce qui sera reellement ecrit. Sur
+  // une synchronisation de routine sans nouveaute, cela n'en coute aucune.
+  await resolveOriginalYears(
+    entries.filter(({ row }) => REFRESH || !byDiscogsId.has(Number(row.discogs_id))),
+  )
+
+  const rows = entries.map(({ row }) => row)
   const toInsert = rows.filter((row) => !byDiscogsId.has(Number(row.discogs_id)))
   const updates = rows
     .map((row) => {
@@ -321,9 +405,12 @@ async function main() {
     .filter(Boolean)
 
   const seen = new Set(rows.map((row) => Number(row.discogs_id)))
-  const orphans = (existing ?? []).filter(
-    (row) => row.discogs_id !== null && !seen.has(Number(row.discogs_id)),
-  )
+  // Sous `--limit`, la collection lue est partielle : rien ne peut etre declare
+  // absent de Discogs sur cette base.
+  const orphans =
+    LIMIT === Infinity
+      ? (existing ?? []).filter((row) => row.discogs_id !== null && !seen.has(Number(row.discogs_id)))
+      : []
   // Les fiches sans `discogs_id` ont ete ajoutees a la main : jamais supprimees.
   const handmade = (existing ?? []).filter((row) => row.discogs_id === null).length
 

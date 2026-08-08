@@ -40,6 +40,13 @@ export const LIST_IS_RANKED: Record<AlbumList, boolean> = {
   vinyl: false,
 }
 
+/**
+ * Listes ou puise le bouton « Au hasard ». La collection vinyle en est exclue :
+ * c'est un inventaire d'objets possedes, qui recoupe largement les autres
+ * listes — le tirage y renverrait souvent un album deja classe ailleurs.
+ */
+export const RANDOM_LISTS: AlbumList[] = ["top", "wannabe", "ost"]
+
 export type ListCounts = Record<AlbumList, number>
 
 export type Album = {

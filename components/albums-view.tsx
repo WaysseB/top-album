@@ -11,6 +11,7 @@ import {
   LIST_LABELS,
   LIST_TAB_LABELS,
   NO_DECADE,
+  RANDOM_LISTS,
   type Album,
   type AlbumInput,
   type AlbumList,
@@ -192,12 +193,17 @@ export function AlbumsView({ list, albumsByList, counts, isAdmin }: Props) {
   const detailEntry = allEntries.find(({ album }) => album.id === detailId) ?? null
 
   /**
-   * Le tirage porte sur les quatre listes, quel que soit l'onglet : c'est un
-   * « surprends-moi », pas un echantillon de la page. Les filtres actifs restent
-   * respectes — ils expriment une intention, contrairement a l'onglet.
+   * Le tirage ignore l'onglet — c'est un « surprends-moi », pas un echantillon
+   * de la page — mais pas les listes : voir `RANDOM_LISTS`. Les filtres actifs
+   * restent respectes, eux : ils expriment une intention.
    */
   const randomPool = useMemo(
-    () => allEntries.filter(matchesQuery).filter(matchesGenre).filter(matchesDecade),
+    () =>
+      allEntries
+        .filter(({ list: from }) => RANDOM_LISTS.includes(from))
+        .filter(matchesQuery)
+        .filter(matchesGenre)
+        .filter(matchesDecade),
     [allEntries, needle, genre, decade],
   )
 
@@ -357,7 +363,9 @@ export function AlbumsView({ list, albumsByList, counts, isAdmin }: Props) {
                 className="h-10 sm:h-8"
                 onClick={pickRandom}
                 disabled={randomPool.length === 0}
-                title={`Un album au hasard parmi ${randomPool.length}, toutes listes confondues`}
+                title={`Un album au hasard parmi ${randomPool.length} — ${RANDOM_LISTS.map(
+                  (l) => LIST_TAB_LABELS[l],
+                ).join(", ")}`}
               >
                 <Shuffle className="h-4 w-4" />
                 Au hasard
