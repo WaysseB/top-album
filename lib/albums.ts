@@ -1,22 +1,36 @@
-/** Les deux classements : le top assume, et la liste d'attente. */
-export type AlbumList = "top" | "wannabe"
+/** Le top assume, la liste d'attente, et les musiques de jeux video. */
+export type AlbumList = "top" | "wannabe" | "ost"
 
-export const ALBUM_LISTS: AlbumList[] = ["top", "wannabe"]
+export const ALBUM_LISTS: AlbumList[] = ["top", "wannabe", "ost"]
 
 export const LIST_LABELS: Record<AlbumList, string> = {
   top: "Mon Top Albums",
   wannabe: "Wannabe",
+  ost: "OST de jeux vidéo",
 }
 
 /** Libelle court, pour les onglets. */
 export const LIST_TAB_LABELS: Record<AlbumList, string> = {
   top: "Top",
   wannabe: "Wannabe",
+  ost: "OST",
 }
 
 export const LIST_PATHS: Record<AlbumList, string> = {
   top: "/",
   wannabe: "/wannabe",
+  ost: "/ost",
+}
+
+/**
+ * Seul le top est un classement : ailleurs, `position` ne sert qu'a fixer un
+ * ordre d'affichage stable, et afficher un numero laisserait croire a une
+ * hierarchie qui n'existe pas.
+ */
+export const LIST_IS_RANKED: Record<AlbumList, boolean> = {
+  top: true,
+  wannabe: false,
+  ost: false,
 }
 
 export type ListCounts = Record<AlbumList, number>
@@ -65,7 +79,7 @@ export const ALBUM_COLUMNS =
 export function rowToAlbum(row: AlbumRow): Album {
   return {
     id: row.id,
-    list: row.list === "wannabe" ? "wannabe" : "top",
+    list: (ALBUM_LISTS as string[]).includes(row.list) ? (row.list as AlbumList) : "top",
     title: row.title,
     artist: row.artist ?? "",
     year: row.year ?? "",
@@ -170,8 +184,8 @@ export function assertUuid(id: unknown): string {
 }
 
 export function assertList(list: unknown): AlbumList {
-  if (list !== "top" && list !== "wannabe") {
+  if (typeof list !== "string" || !(ALBUM_LISTS as string[]).includes(list)) {
     throw new Error("Liste inconnue.")
   }
-  return list
+  return list as AlbumList
 }

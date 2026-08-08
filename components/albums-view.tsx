@@ -4,8 +4,10 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAlbums } from "@/hooks/use-albums"
 import {
+  ALBUM_LISTS,
   decadeLabel,
   decadeOf,
+  LIST_IS_RANKED,
   LIST_LABELS,
   LIST_TAB_LABELS,
   NO_DECADE,
@@ -22,7 +24,7 @@ import { AlbumSearch } from "@/components/album-search"
 import { FacetFilter, type FacetItem } from "@/components/facet-filter"
 import { ListTabs } from "@/components/list-tabs"
 import { Button } from "@/components/ui/button"
-import { Check, ListOrdered, LogOut, Plus } from "lucide-react"
+import { Check, ListOrdered, LogOut, Plus, Shuffle } from "lucide-react"
 
 type Props = {
   list: AlbumList
@@ -40,12 +42,14 @@ type Entry = {
 
 const SUBTITLES: Record<AlbumList, string> = {
   top: "cliquez sur une pochette pour les détails et l'écoute.",
-  wannabe: "les albums à découvrir, en attente d'une place dans le top.",
+  wannabe: "les albums à découvrir, sans ordre de préférence.",
+  ost: "les musiques de jeux vidéo, sans ordre de préférence.",
 }
 
 const EMPTY_STATES: Record<AlbumList, string> = {
   top: "Aucun album pour le moment.",
   wannabe: "Aucun album en attente.",
+  ost: "Aucune bande originale pour le moment.",
 }
 
 /** Repli des accents et de la casse, pour une recherche tolerante. */
@@ -95,7 +99,8 @@ export function AlbumsView({ list, albumsByList, counts, isAdmin }: Props) {
     if (error) setNotice(null)
   }, [error])
 
-  const otherList: AlbumList = list === "top" ? "wannabe" : "top"
+  const ranked = LIST_IS_RANKED[list]
+  const otherLists = useMemo(() => ALBUM_LISTS.filter((l) => l !== list), [list])
 
   // Le rang est fige sur la liste complete : filtrer ne renumerote pas.
   const currentEntries = useMemo<Entry[]>(
@@ -103,14 +108,17 @@ export function AlbumsView({ list, albumsByList, counts, isAdmin }: Props) {
     [albums, list],
   )
   const otherEntries = useMemo<Entry[]>(
-    () => albumsByList[otherList].map((album, index) => ({ album, rank: index + 1, list: otherList })),
-    [albumsByList, otherList],
+    () =>
+      otherLists.flatMap((other) =>
+        albumsByList[other].map((album, index) => ({ album, rank: index + 1, list: other })),
+      ),
+    [albumsByList, otherLists],
   )
 
   const needle = fold(query)
   const searching = needle.length > 0
 
-  // La recherche porte sur les deux listes ; sans recherche, on reste sur l'onglet.
+  // La recherche porte sur toutes les listes ; sans recherche, on reste sur l'onglet.
   const scope = useMemo(
     () => (searching ? [...currentEntries, ...otherEntries] : currentEntries),
     [searching, currentEntries, otherEntries],
@@ -170,10 +178,10 @@ export function AlbumsView({ list, albumsByList, counts, isAdmin }: Props) {
   // En recherche, on separe les resultats par liste — l'onglet courant d'abord.
   const sections = useMemo(
     () =>
-      [list, otherList]
+      [list, ...otherLists]
         .map((section) => ({ list: section, entries: visible.filter((e) => e.list === section) }))
         .filter(({ entries }) => entries.length > 0),
-    [visible, list, otherList],
+    [visible, list, otherLists],
   )
 
   const allEntries = useMemo(
@@ -184,8 +192,6 @@ export function AlbumsView({ list, albumsByList, counts, isAdmin }: Props) {
 
   const filtered = searching || genre !== null || decade !== null
 
-  // `FacetFilter` s'efface en dessous de deux entrees : le separateur ne doit
-  // apparaitre que si les deux rangees sont effectivement rendues.
   const showGenres = genreItems.length > 1
   const showDecades = decadeItems.length > 1
 
@@ -193,6 +199,13 @@ export function AlbumsView({ list, albumsByList, counts, isAdmin }: Props) {
     setQuery("")
     setGenre(null)
     setDecade(null)
+  }
+
+  /** Tire dans ce qui est affiche : les filtres en cours restent respectes. */
+  const pickRandom = () => {
+    if (visible.length === 0) return
+    const entry = visible[Math.floor(Math.random() * visible.length)]
+    setDetailId(entry.album.id)
   }
 
   /**
@@ -208,10 +221,26 @@ export function AlbumsView({ list, albumsByList, counts, isAdmin }: Props) {
     })
   }
 
+  const handleDragEnter = (index: number) => {
+    if (dragIndex.current === null || dragIndex.current === index) return
+    reorder(dragIndex.current, index)
+    dragIndex.current = index
+    setDragging(index)
+    setDragOver(index)
+  }
+
+  // L'ordre n'est envoye en base qu'une fois, au relachement de la pochette.
+  const handleDragEnd = () => {
+    const moved = dragIndex.current !== null
+    dragIndex.current = null
+    setDragging(null)
+    setDragOver(null)
+    if (moved) void persistOrder()
+  }
+
   /**
    * Selection en deux temps, seule mecanique disponible au toucher : le
    * glisser-deposer HTML5 n'emet pas `dragstart` depuis un doigt.
-   * Premier appui = on prend l'album, second = on le pose a cette position.
    */
   const handleActivate = (album: Album, index: number) => {
     if (!editMode) {
@@ -238,23 +267,6 @@ export function AlbumsView({ list, albumsByList, counts, isAdmin }: Props) {
   }
 
   const pickedAlbum = picked ? albums.find((a) => a.id === picked) ?? null : null
-
-  const handleDragEnter = (index: number) => {
-    if (dragIndex.current === null || dragIndex.current === index) return
-    reorder(dragIndex.current, index)
-    dragIndex.current = index
-    setDragging(index)
-    setDragOver(index)
-  }
-
-  // L'ordre n'est envoye en base qu'une fois, au relachement de la pochette.
-  const handleDragEnd = () => {
-    const moved = dragIndex.current !== null
-    dragIndex.current = null
-    setDragging(null)
-    setDragOver(null)
-    if (moved) void persistOrder()
-  }
 
   const openAdd = () => {
     setEditing(null)
@@ -290,11 +302,13 @@ export function AlbumsView({ list, albumsByList, counts, isAdmin }: Props) {
         pending ? "opacity-70" : ""
       }`}
     >
-      {entries.map(({ album, rank }, index) => (
+      {entries.map(({ album, rank, list: from }, index) => (
         <AlbumCard
           key={album.id}
           album={album}
           rank={rank}
+          // Un wannabe croise dans les resultats ne doit pas porter de numero.
+          showRank={LIST_IS_RANKED[from]}
           editMode={editMode}
           isPicked={picked === album.id}
           isDragging={dragging === index}
@@ -325,30 +339,46 @@ export function AlbumsView({ list, albumsByList, counts, isAdmin }: Props) {
             </p>
           </div>
 
-          {/* Rien n'est propose aux visiteurs : l'acces a /login se fait par l'URL.
-              Les boutons passent a h-10 sur mobile : 32 px se ratent au pouce. */}
-          {isAdmin && (
-            <div className="flex flex-wrap items-center gap-2">
-              <Button variant="outline" className="h-10 sm:h-8" onClick={() => void handleLogout()}>
-                <LogOut className="h-4 w-4" />
-                Déconnexion
-              </Button>
+          {/* Les boutons passent a h-10 sur mobile : 32 px se ratent au pouce. */}
+          <div className="flex flex-wrap items-center gap-2">
+            {!editMode && (
               <Button
-                variant={editMode ? "default" : "outline"}
+                variant="outline"
                 className="h-10 sm:h-8"
-                onClick={toggleEditMode}
-                aria-pressed={editMode}
-                disabled={albums.length < 2}
+                onClick={pickRandom}
+                disabled={visible.length === 0}
               >
-                {editMode ? <Check className="h-4 w-4" /> : <ListOrdered className="h-4 w-4" />}
-                {editMode ? "Terminer" : "Réorganiser"}
+                <Shuffle className="h-4 w-4" />
+                Au hasard
               </Button>
-              <Button className="h-10 sm:h-8" onClick={openAdd} disabled={editMode}>
-                <Plus className="h-4 w-4" />
-                Ajouter
-              </Button>
-            </div>
-          )}
+            )}
+
+            {isAdmin && (
+              <>
+                <Button variant="outline" className="h-10 sm:h-8" onClick={() => void handleLogout()}>
+                  <LogOut className="h-4 w-4" />
+                  Déconnexion
+                </Button>
+                {/* Seul un classement se reorganise. */}
+                {ranked && (
+                  <Button
+                    variant={editMode ? "default" : "outline"}
+                    className="h-10 sm:h-8"
+                    onClick={toggleEditMode}
+                    aria-pressed={editMode}
+                    disabled={albums.length < 2}
+                  >
+                    {editMode ? <Check className="h-4 w-4" /> : <ListOrdered className="h-4 w-4" />}
+                    {editMode ? "Terminer" : "Réorganiser"}
+                  </Button>
+                )}
+                <Button className="h-10 sm:h-8" onClick={openAdd} disabled={editMode}>
+                  <Plus className="h-4 w-4" />
+                  Ajouter
+                </Button>
+              </>
+            )}
+          </div>
         </header>
 
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -380,7 +410,7 @@ export function AlbumsView({ list, albumsByList, counts, isAdmin }: Props) {
 
         {!editMode && searching && (
           <p className="mb-5 text-sm text-muted-foreground">
-            Recherche sur les deux listes — {visible.length} résultat{visible.length > 1 ? "s" : ""}.
+            Recherche sur toutes les listes — {visible.length} résultat{visible.length > 1 ? "s" : ""}.
           </p>
         )}
 
@@ -501,8 +531,14 @@ export function AlbumsView({ list, albumsByList, counts, isAdmin }: Props) {
       <AlbumDetail
         album={detailEntry?.album ?? null}
         rank={detailEntry?.rank ?? 0}
+        showRank={detailEntry ? LIST_IS_RANKED[detailEntry.list] : false}
         isAdmin={isAdmin}
         onClose={() => setDetailId(null)}
+        onSelectArtist={(artist) => {
+          setDetailId(null)
+          resetFilters()
+          setQuery(artist)
+        }}
         onEdit={() => detailEntry && openEdit(detailEntry.album)}
         onDelete={() => {
           if (detailEntry) {

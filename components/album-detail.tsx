@@ -9,9 +9,13 @@ import { ExternalLink, Pencil, Trash2, X } from "lucide-react"
 type Props = {
   album: Album | null
   rank: number
+  /** Faux sur les listes non classees. */
+  showRank?: boolean
   /** Les actions d'edition ne sont rendues que pour l'administrateur connecte. */
   isAdmin: boolean
   onClose: () => void
+  /** Rebondit sur la discographie : la recherche est deja globale aux trois listes. */
+  onSelectArtist?: (artist: string) => void
   onEdit: () => void
   onDelete: () => void
 }
@@ -25,7 +29,16 @@ function coverGradient(seed: string): string {
   return `linear-gradient(145deg, oklch(0.32 0.09 ${hue}), oklch(0.18 0.05 ${(hue + 60) % 360}))`
 }
 
-export function AlbumDetail({ album, rank, isAdmin, onClose, onEdit, onDelete }: Props) {
+export function AlbumDetail({
+  album,
+  rank,
+  showRank = true,
+  isAdmin,
+  onClose,
+  onSelectArtist,
+  onEdit,
+  onDelete,
+}: Props) {
   // Appelé avant tout retour anticipé : l'ordre des hooks doit rester stable.
   const dialogRef = useModal(album !== null, onClose)
 
@@ -80,9 +93,11 @@ export function AlbumDetail({ album, rank, isAdmin, onClose, onEdit, onDelete }:
                 <span className="font-mono text-5xl font-semibold text-foreground/80">{initials}</span>
               </div>
             )}
-            <span className="absolute left-3 top-3 flex h-8 min-w-8 items-center justify-center rounded-full bg-background/70 px-2 font-mono text-sm font-semibold text-foreground backdrop-blur-sm">
-              #{rank}
-            </span>
+            {showRank && (
+              <span className="absolute left-3 top-3 flex h-8 min-w-8 items-center justify-center rounded-full bg-background/70 px-2 font-mono text-sm font-semibold text-foreground backdrop-blur-sm">
+                #{rank}
+              </span>
+            )}
             <button
               type="button"
               onClick={onClose}
@@ -98,7 +113,19 @@ export function AlbumDetail({ album, rank, isAdmin, onClose, onEdit, onDelete }:
             <div>
               <h2 className="text-xl font-semibold leading-tight text-foreground text-balance">{album.title}</h2>
               <p className="text-sm text-muted-foreground">
-                {album.artist}
+                {album.artist &&
+                  (onSelectArtist ? (
+                    <button
+                      type="button"
+                      onClick={() => onSelectArtist(album.artist)}
+                      className="rounded-sm underline decoration-dotted underline-offset-4 outline-none ring-ring transition-colors hover:text-foreground focus-visible:ring-2"
+                      title={`Voir tous les albums de ${album.artist}`}
+                    >
+                      {album.artist}
+                    </button>
+                  ) : (
+                    album.artist
+                  ))}
                 {album.year ? ` · ${album.year}` : ""}
               </p>
               {album.favoriteTrack && (

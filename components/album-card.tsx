@@ -6,6 +6,8 @@ import { GripVertical } from "lucide-react"
 type Props = {
   album: Album
   rank: number
+  /** Faux sur les listes non classees : le numero laisserait croire a une hierarchie. */
+  showRank?: boolean
   /** Activation de la carte : ouvre la fiche, ou sert au deplacement en mode reorganisation. */
   onOpen: () => void
   /** Mode reorganisation : la carte devient deplacable au lieu d'ouvrir la fiche. */
@@ -32,6 +34,7 @@ function coverGradient(seed: string): string {
 export function AlbumCard({
   album,
   rank,
+  showRank = true,
   onOpen,
   editMode = false,
   isPicked = false,
@@ -49,7 +52,7 @@ export function AlbumCard({
 
   const description = [
     `${album.title}${album.artist ? ` par ${album.artist}` : ""}`,
-    `classé numéro ${rank}`,
+    showRank ? `classé numéro ${rank}` : null,
     album.favoriteTrack ? `titre préféré : ${album.favoriteTrack}` : null,
   ]
     .filter(Boolean)
@@ -105,9 +108,11 @@ export function AlbumCard({
           </div>
         )}
 
-        <span className="absolute left-2 top-2 flex h-7 min-w-7 items-center justify-center rounded-full bg-background/70 px-1.5 font-mono text-xs font-semibold text-foreground backdrop-blur-sm">
-          {rank}
-        </span>
+        {showRank && (
+          <span className="absolute left-2 top-2 flex h-7 min-w-7 items-center justify-center rounded-full bg-background/70 px-1.5 font-mono text-xs font-semibold text-foreground backdrop-blur-sm">
+            {rank}
+          </span>
+        )}
 
         {editMode && (
           <span className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-background/70 text-foreground backdrop-blur-sm">

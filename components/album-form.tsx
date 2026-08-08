@@ -3,7 +3,15 @@
 import type React from "react"
 
 import { useEffect, useState } from "react"
-import { formatGenres, LIST_TAB_LABELS, parseGenres, type Album, type AlbumInput, type AlbumList } from "@/lib/albums"
+import {
+  ALBUM_LISTS,
+  formatGenres,
+  LIST_TAB_LABELS,
+  parseGenres,
+  type Album,
+  type AlbumInput,
+  type AlbumList,
+} from "@/lib/albums"
 import { Button } from "@/components/ui/button"
 import { useModal } from "@/hooks/use-modal"
 import { parseDeezerRef } from "@/lib/deezer"
@@ -200,8 +208,11 @@ export function AlbumForm({ open, initial, defaultList, onClose, onSubmit }: Pro
                   value={list}
                   onChange={(e) => setList(e.target.value as AlbumList)}
                 >
-                  <option value="top">{LIST_TAB_LABELS.top}</option>
-                  <option value="wannabe">{LIST_TAB_LABELS.wannabe}</option>
+                  {ALBUM_LISTS.map((option) => (
+                    <option key={option} value={option}>
+                      {LIST_TAB_LABELS[option]}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
