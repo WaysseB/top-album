@@ -11,6 +11,8 @@ export type Tally = {
 export type Completeness = {
   label: string
   filled: number
+  /** Les fiches a completer, pour pouvoir aller les corriger. */
+  missing: Album[]
 }
 
 export type AlbumStats = {
@@ -79,7 +81,11 @@ export function computeStats(albums: Album[]): AlbumStats {
     return Number(a.key) - Number(b.key)
   })
 
-  const count = (predicate: (album: Album) => boolean) => albums.filter(predicate).length
+  /** Un critere de completude : ce qui est rempli, et surtout ce qui manque. */
+  const check = (label: string, filled: (album: Album) => boolean): Completeness => {
+    const missing = albums.filter((album) => !filled(album))
+    return { label, filled: albums.length - missing.length, missing }
+  }
 
   return {
     total: albums.length,
@@ -90,13 +96,13 @@ export function computeStats(albums: Album[]): AlbumStats {
     distinctArtists: artists.length,
     // Sert de tableau de bord de saisie : ce qu'il reste a completer a la main.
     completeness: [
-      { label: "Pochette", filled: count((a) => Boolean(a.cover)) },
-      { label: "Année", filled: count((a) => Boolean(a.year)) },
-      { label: "Genres", filled: count((a) => a.genres.length > 0) },
-      { label: "Titre préféré", filled: count((a) => Boolean(a.favoriteTrack)) },
-      { label: "Deezer", filled: count((a) => Boolean(a.deezerUrl)) },
-      { label: "Spotify", filled: count((a) => Boolean(a.spotifyUrl)) },
-      { label: "Apple Music", filled: count((a) => Boolean(a.appleMusicUrl)) },
+      check("Pochette", (a) => Boolean(a.cover)),
+      check("Année", (a) => Boolean(a.year)),
+      check("Genres", (a) => a.genres.length > 0),
+      check("Titre préféré", (a) => Boolean(a.favoriteTrack)),
+      check("Deezer", (a) => Boolean(a.deezerUrl)),
+      check("Spotify", (a) => Boolean(a.spotifyUrl)),
+      check("Apple Music", (a) => Boolean(a.appleMusicUrl)),
     ],
   }
 }

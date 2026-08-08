@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useAlbums } from "@/hooks/use-albums"
 import {
   ALBUM_LISTS,
@@ -82,11 +82,15 @@ export function AlbumsView({ list, albumsByList, counts, isAdmin }: Props) {
   const { albums, pending, error, clearError, addAlbum, updateAlbum, removeAlbum, reorder, persistOrder } =
     useAlbums(albumsByList[list])
 
+  // Point d'entree depuis la page de statistiques : `?q=` amorce la recherche
+  // pour atterrir directement sur la fiche a completer.
+  const searchParams = useSearchParams()
+
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Album | null>(null)
   const [detailId, setDetailId] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
-  const [query, setQuery] = useState("")
+  const [query, setQuery] = useState(() => searchParams.get("q") ?? "")
   const [genre, setGenre] = useState<string | null>(null)
   const [decade, setDecade] = useState<string | null>(null)
   const [editMode, setEditMode] = useState(false)

@@ -5,14 +5,16 @@ import Link from "next/link"
 import {
   ALBUM_LISTS,
   decadeLabel,
+  LIST_PATHS,
   LIST_TAB_LABELS,
   NO_DECADE,
   type Album,
   type AlbumList,
   type ListCounts,
 } from "@/lib/albums"
-import { computeStats, type Tally } from "@/lib/stats"
+import { computeStats, type Completeness, type Tally } from "@/lib/stats"
 import { ListTabs } from "@/components/list-tabs"
+import { ChevronRight } from "lucide-react"
 
 type Scope = AlbumList | "all"
 
@@ -88,6 +90,91 @@ function BarList({
         </ol>
       )}
     </section>
+  )
+}
+
+/**
+ * Une ligne de completude, depliable sur la liste des fiches a corriger.
+ *
+ * Chaque album pointe vers sa liste avec la recherche pre-remplie sur son titre :
+ * on arrive directement dessus, prêt à ouvrir la fiche et à la compléter.
+ */
+function CompletenessRow({ item, total }: { item: Completeness; total: number }) {
+  const { label, filled, missing } = item
+  const share = total > 0 ? Math.round((filled / total) * 100) : 0
+
+  const bar = (
+    <div className="h-1.5 overflow-hidden rounded-full bg-secondary">
+      <div
+        className={`h-full rounded-full ${share === 100 ? "bg-primary" : "bg-primary/50"}`}
+        style={{ width: `${share}%` }}
+      />
+    </div>
+  )
+
+  const heading = (
+    <div className="flex items-baseline justify-between gap-3">
+      <span className="text-sm text-foreground">{label}</span>
+      <span className="font-mono text-xs text-muted-foreground tabular-nums">
+        {filled}/{total} · {share} %
+      </span>
+    </div>
+  )
+
+  // Rien a corriger : pas de fleche ni de zone cliquable qui ne menerait nulle part.
+  if (missing.length === 0) {
+    return (
+      <li className="flex flex-col gap-1 py-1.5">
+        {heading}
+        {bar}
+      </li>
+    )
+  }
+
+  return (
+    <li>
+      <details className="group">
+        <summary className="flex cursor-pointer list-none flex-col gap-1 rounded-md py-1.5 outline-none ring-ring focus-visible:ring-2 [&::-webkit-details-marker]:hidden">
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="flex items-center gap-1.5 text-sm text-foreground">
+              <ChevronRight
+                className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform group-open:rotate-90"
+                aria-hidden="true"
+              />
+              {label}
+              <span className="text-xs text-muted-foreground">
+                — {missing.length} à compléter
+              </span>
+            </span>
+            <span className="font-mono text-xs text-muted-foreground tabular-nums">
+              {filled}/{total} · {share} %
+            </span>
+          </div>
+          {bar}
+        </summary>
+
+        {/* Plafonnee : « Deezer » sur les vinyles, c'est 162 lignes. */}
+        <ul className="mb-2 ml-5 max-h-64 space-y-px overflow-y-auto overscroll-contain rounded-md border border-border bg-background/50 p-1.5">
+          {missing.map((album) => (
+            <li key={album.id}>
+              <Link
+                href={`${LIST_PATHS[album.list]}?q=${encodeURIComponent(album.title)}`}
+                className="flex items-baseline justify-between gap-3 rounded px-2 py-1.5 text-xs outline-none ring-ring transition-colors hover:bg-secondary focus-visible:ring-2"
+              >
+                <span className="min-w-0 truncate text-foreground">
+                  <span className="text-muted-foreground">{album.artist}</span>
+                  {album.artist ? " — " : ""}
+                  {album.title}
+                </span>
+                <span className="shrink-0 font-mono text-[0.65rem] uppercase tracking-wider text-muted-foreground">
+                  {LIST_TAB_LABELS[album.list]}
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </details>
+    </li>
   )
 }
 
@@ -230,26 +317,10 @@ export function StatsView({ albumsByList, counts }: Props) {
               <p className="mb-4 text-xs text-muted-foreground">
                 Ce qu&apos;il reste à renseigner sur ce périmètre.
               </p>
-              <ul className="flex flex-col gap-2.5">
-                {stats.completeness.map(({ label, filled }) => {
-                  const share = Math.round((filled / stats.total) * 100)
-                  return (
-                    <li key={label} className="flex flex-col gap-1">
-                      <div className="flex items-baseline justify-between gap-3">
-                        <span className="text-sm text-foreground">{label}</span>
-                        <span className="font-mono text-xs text-muted-foreground tabular-nums">
-                          {filled}/{stats.total} · {share} %
-                        </span>
-                      </div>
-                      <div className="h-1.5 overflow-hidden rounded-full bg-secondary">
-                        <div
-                          className={`h-full rounded-full ${share === 100 ? "bg-primary" : "bg-primary/50"}`}
-                          style={{ width: `${share}%` }}
-                        />
-                      </div>
-                    </li>
-                  )
-                })}
+              <ul className="flex flex-col gap-1">
+                {stats.completeness.map((item) => (
+                  <CompletenessRow key={item.label} item={item} total={stats.total} />
+                ))}
               </ul>
             </section>
           </>
