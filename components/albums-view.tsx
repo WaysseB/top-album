@@ -41,12 +41,12 @@ type Entry = {
 }
 
 const SUBTITLES: Record<AlbumList, string> = {
-  top: "cliquez sur une pochette pour les détails et l'écoute.",
+  top: "La bande son de ma vie. Les albums les plus importants. Ceux qui passent le plus souvent dans mes oreilles.",
   // Ces listes ont un ordre, simplement il ne s'affiche pas : promettre
   // « sans ordre de préférence » serait devenu faux.
-  wannabe: "les albums à découvrir.",
-  ost: "les musiques de jeux vidéo.",
-  vinyl: "les disques que je possède, synchronisés depuis Discogs.",
+  wannabe: "Il y a le top 100, et ceux qui auraient aimé y être. D'excellents albums, qui sont aux portes du top.",
+  ost: "Mes musiques de jeux vidéo préférées. Parce que le bande son est parfois aussi importante que le gameplay.",
+  vinyl: "Ma collection de vinyles, histoire de flex un peu (synchro depuis Discogs).",
 }
 
 const EMPTY_STATES: Record<AlbumList, string> = {
@@ -379,7 +379,7 @@ export function AlbumsView({ list }: Props) {
       <div className="mx-auto max-w-6xl">
         <header className="mb-6 flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="mb-1 font-mono text-xs uppercase tracking-widest text-muted-foreground">Ma sélection</p>
+            <p className="mb-1 font-mono text-xs uppercase tracking-widest text-muted-foreground">Wes</p>
             <h1 className="text-3xl font-semibold tracking-tight text-foreground text-balance sm:text-4xl">
               {LIST_LABELS[list]}
             </h1>
