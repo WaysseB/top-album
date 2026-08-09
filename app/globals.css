@@ -159,6 +159,21 @@
   * {
     @apply border-border outline-ring/50;
   }
+
+  /* Tailwind 4 ne force plus `cursor: pointer` sur les elements interactifs :
+     sa remise a zero laisse desormais le curseur par defaut du navigateur, qui
+     est la fleche. Sans cette regle, aucun bouton de l'application ne se
+     signale au survol — ni les pastilles de filtre, ni les croix de fermeture,
+     ni les fleches de navigation.
+
+     Une regle unique plutot qu'une classe repetee partout : c'est un
+     comportement attendu de tout bouton, pas une decision d'habillage.
+     Les elements desactives en sont exclus, leur curseur devant rester neutre. */
+  button:not(:disabled),
+  summary,
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
   body {
     @apply bg-background text-foreground;
 

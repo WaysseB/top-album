@@ -36,7 +36,14 @@ export function ListTabs({ counts }: Props) {
     // des lors que le defilement horizontal est actif.
     <nav
       aria-label="Navigation"
-      className="flex items-center gap-1 overflow-x-auto shadow-[inset_0_-1px_0_0_var(--color-border)]"
+      // Barre de defilement masquee, comme sur les rangees de pastilles : elle
+      // s'afficherait sous les onglets et mangerait plusieurs pixels d'une
+      // barre deja dense. Le debordement reste bien defilable au doigt.
+      className={[
+        "flex items-center gap-1 overflow-x-auto overscroll-x-contain",
+        "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+        "shadow-[inset_0_-1px_0_0_var(--color-border)]",
+      ].join(" ")}
     >
       {ALBUM_LISTS.map((list) => {
         const href = LIST_PATHS[list]
