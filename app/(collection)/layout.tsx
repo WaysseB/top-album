@@ -33,6 +33,22 @@ async function Collection({ children }: { children: ReactNode }) {
       <CollectionProvider
         value={{ albumsByList: { top, wannabe, ost, vinyl }, counts, isAdmin: admin }}
       >
+        {/*
+          Cache de la zone systeme.
+
+          `viewportFit: 'cover'` fait courir la page sous la barre d'etat : au
+          defilement, les pochettes passaient derriere l'heure et la batterie.
+          Cette bande fixe les masque avec la couleur de fond.
+
+          Elle ne coute aucune hauteur dans le flux, et sa hauteur vaut zero sur
+          un ecran sans encoche. Elle passe au-dessus de la barre de filtres
+          (z-30) mais sous les modales (z-50), qui gerent leur propre marge.
+        */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none fixed inset-x-0 top-0 z-40 h-[env(safe-area-inset-top)] bg-background"
+        />
+
         {children}
         {/* Monte ici plutot que dans chaque vue : il sert aux quatre listes
             comme a la page de statistiques, toutes longues a parcourir. */}
