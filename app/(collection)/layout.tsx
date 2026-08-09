@@ -1,4 +1,5 @@
 import { Suspense, type ReactNode } from "react"
+import { BackToTop } from "@/components/back-to-top"
 import { CollectionProvider } from "@/components/collection-context"
 import { CollectionSkeleton } from "@/components/collection-skeleton"
 import { ErrorPanel } from "@/components/error-panel"
@@ -33,6 +34,9 @@ async function Collection({ children }: { children: ReactNode }) {
         value={{ albumsByList: { top, wannabe, ost, vinyl }, counts, isAdmin: admin }}
       >
         {children}
+        {/* Monte ici plutot que dans chaque vue : il sert aux quatre listes
+            comme a la page de statistiques, toutes longues a parcourir. */}
+        <BackToTop />
       </CollectionProvider>
     )
   } catch (error) {

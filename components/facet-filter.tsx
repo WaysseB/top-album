@@ -55,7 +55,7 @@ export function FacetFilter({ label, items, total, selected, onSelect, collapseA
   // dans un conteneur `overflow-x-auto`, l'axe vertical passe lui aussi en
   // defilement, et une zone tactile debordante y ferait glisser la rangee.
   const chip = (active: boolean) =>
-    `inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-2.5 text-xs font-medium outline-none ring-ring transition-colors focus-visible:ring-2 sm:px-3 sm:py-1 ${
+    `inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-2 text-xs font-medium outline-none ring-ring transition-colors focus-visible:ring-2 sm:px-3 sm:py-1 ${
       active
         ? "border-primary bg-primary/15 text-foreground"
         : "border-border bg-secondary text-muted-foreground hover:text-foreground"
@@ -65,19 +65,25 @@ export function FacetFilter({ label, items, total, selected, onSelect, collapseA
     `font-mono text-[0.65rem] ${active ? "text-foreground/70" : "text-muted-foreground/70"}`
 
   return (
-    <div className="flex flex-col gap-1.5">
+    // Sur telephone l'intitule se met a gauche des pastilles plutot qu'au-dessus :
+    // deux facettes empilees, cela represente deux lignes gagnees dans une barre
+    // qui reste affichee en permanence. Au-dela de `sm`, la place ne manque pas
+    // et l'intitule reprend sa position au-dessus.
+    <div className="flex items-center gap-2 sm:flex-col sm:items-start sm:gap-1.5">
       {/* L'intitule reste hors du defilement, pour ne pas s'echapper sur mobile. */}
-      <span className="font-mono text-[0.65rem] uppercase tracking-widest text-muted-foreground/70">
+      <span className="shrink-0 font-mono text-[0.65rem] uppercase tracking-widest text-muted-foreground/70">
         {label}
       </span>
 
       <div
         role="group"
         aria-label={`Filtrer par ${label.toLowerCase()}`}
+        // Le debordement ne porte plus qu'a droite : a gauche, l'intitule tient
+        // le bord. Un `-mx-4` ferait glisser la rangee sous lui.
         className={[
-          "-mx-4 flex items-center gap-1.5 overflow-x-auto overscroll-x-contain px-4 py-1",
+          "-mr-4 flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto overscroll-x-contain py-1 pr-4",
           "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
-          "sm:mx-0 sm:flex-wrap sm:overflow-x-visible sm:px-0 sm:py-0",
+          "sm:mr-0 sm:w-full sm:flex-none sm:flex-wrap sm:overflow-x-visible sm:py-0 sm:pr-0",
         ].join(" ")}
       >
         <button type="button" onClick={() => onSelect(null)} className={chip(selected === null)}>

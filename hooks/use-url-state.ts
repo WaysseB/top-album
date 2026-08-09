@@ -2,15 +2,16 @@
 
 import { useEffect, useRef } from "react"
 
-/** Ce que l'URL doit refleter : la recherche, les filtres, la fiche ouverte. */
+/** Ce que l'URL doit refleter : la recherche, les filtres, les fiches ouvertes. */
 export type UrlState = {
   query: string
   genre: string | null
   decade: string | null
   album: string | null
+  about: boolean
 }
 
-const EMPTY: UrlState = { query: "", genre: null, decade: null, album: null }
+const EMPTY: UrlState = { query: "", genre: null, decade: null, album: null, about: false }
 
 export function readUrlState(search: string): UrlState {
   const params = new URLSearchParams(search)
@@ -19,6 +20,7 @@ export function readUrlState(search: string): UrlState {
     genre: params.get("genre"),
     decade: params.get("decennie"),
     album: params.get("album"),
+    about: params.get("apropos") === "1",
   }
 }
 
@@ -28,6 +30,7 @@ function buildUrl(pathname: string, state: UrlState): string {
   if (state.genre) params.set("genre", state.genre)
   if (state.decade) params.set("decennie", state.decade)
   if (state.album) params.set("album", state.album)
+  if (state.about) params.set("apropos", "1")
 
   const query = params.toString()
   return query ? `${pathname}?${query}` : pathname
@@ -55,7 +58,11 @@ export function useUrlState(
   state: UrlState,
   onRestore: (state: UrlState) => void,
 ): void {
+  // Les deux fiches empilent une entree d'historique a l'ouverture ; on suit
+  // donc leur etat precedent pour distinguer une ouverture d'un simple
+  // changement de filtre.
   const previousAlbum = useRef(state.album)
+  const previousAbout = useRef(state.about)
 
   // `onRestore` vit dans une reference : sans cela, l'abonnement a `popstate`
   // serait refait a chaque rendu, la fonction etant recreee a chaque fois.
@@ -68,17 +75,22 @@ export function useUrlState(
     const url = buildUrl(pathname, state)
     if (url === window.location.pathname + window.location.search) {
       previousAlbum.current = state.album
+      previousAbout.current = state.about
       return
     }
 
     // Seule l'ouverture d'une fiche merite une entree d'historique. Sa fermeture
     // n'en cree pas : elle est deja obtenue par le retour arriere.
-    const opening = state.album !== null && previousAlbum.current === null
+    const opening =
+      (state.album !== null && previousAlbum.current === null) ||
+      (state.about && !previousAbout.current)
+
     previousAlbum.current = state.album
+    previousAbout.current = state.about
 
     if (opening) window.history.pushState(null, "", url)
     else window.history.replaceState(null, "", url)
-  }, [pathname, state.query, state.genre, state.decade, state.album])
+  }, [pathname, state.query, state.genre, state.decade, state.album, state.about])
 
   useEffect(() => {
     const onPopState = () => restore.current(readUrlState(window.location.search))

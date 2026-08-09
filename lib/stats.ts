@@ -26,6 +26,26 @@ export type AlbumStats = {
   completeness: Completeness[]
 }
 
+/**
+ * Credits qui ne designent personne.
+ *
+ * Une compilation ou une bande originale collective est creditee « Various » par
+ * Discogs et « Various Artists » a la saisie. Les compter reviendrait a faire de
+ * ce fourre-tout l'artiste le plus cite — c'est le cas aujourd'hui sur les OST.
+ *
+ * Les albums, eux, restent comptes partout ailleurs : ils existent.
+ */
+const NOT_AN_ARTIST = new Set([
+  "various",
+  "various artists",
+  "va",
+  "v.a.",
+  "artistes divers",
+  "divers",
+  "compilation",
+  "unknown artist",
+])
+
 /** Repli des accents et de la casse : « Bjork » et « Björk » sont le meme artiste. */
 function fold(value: string): string {
   return value
@@ -62,7 +82,9 @@ function group(values: string[]): Tally[] {
 }
 
 export function computeStats(albums: Album[]): AlbumStats {
-  const artists = group(albums.map((a) => a.artist))
+  // Le filtrage porte sur le regroupement des artistes, et sur lui seul : les
+  // genres, les decennies et le nombre d'albums restent inchanges.
+  const artists = group(albums.map((a) => a.artist).filter((name) => !NOT_AN_ARTIST.has(fold(name))))
   const genres = group(albums.flatMap((a) => a.genres))
 
   // Les annees se trient chronologiquement, pas par frequence : le classement

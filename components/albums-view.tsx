@@ -26,7 +26,8 @@ import { AlbumSearch } from "@/components/album-search"
 import { FacetFilter, type FacetItem } from "@/components/facet-filter"
 import { ListTabs } from "@/components/list-tabs"
 import { Button } from "@/components/ui/button"
-import { Check, ListOrdered, LogOut, Plus, Shuffle } from "lucide-react"
+import { AboutDialog } from "@/components/about-dialog"
+import { Check, Info, ListOrdered, LogOut, Plus, Shuffle } from "lucide-react"
 
 type Props = {
   /** Onglet actif. Le reste vient du layout, via le contexte. */
@@ -98,6 +99,7 @@ export function AlbumsView({ list }: Props) {
   const [query, setQuery] = useState(initial.query)
   const [genre, setGenre] = useState<string | null>(initial.genre)
   const [decade, setDecade] = useState<string | null>(initial.decade)
+  const [aboutOpen, setAboutOpen] = useState(initial.about)
   const [editMode, setEditMode] = useState(false)
   /** Id de l'album selectionne au toucher, en attente de sa destination. */
   const [picked, setPicked] = useState<string | null>(null)
@@ -112,11 +114,12 @@ export function AlbumsView({ list }: Props) {
 
   // L'URL reflete la recherche, les filtres et la fiche ouverte ; le retour
   // arriere du navigateur referme celle-ci.
-  useUrlState(pathname, { query, genre, decade, album: detailId }, (restored) => {
+  useUrlState(pathname, { query, genre, decade, album: detailId, about: aboutOpen }, (restored) => {
     setQuery(restored.query)
     setGenre(restored.genre)
     setDecade(restored.decade)
     setDetailId(restored.album)
+    setAboutOpen(restored.about)
   })
 
   const otherLists = useMemo(() => ALBUM_LISTS.filter((l) => l !== list), [list])
@@ -375,14 +378,28 @@ export function AlbumsView({ list }: Props) {
   )
 
   return (
-    <main className="min-h-screen px-4 py-10 sm:px-8 lg:px-12">
-      <div className="mx-auto max-w-6xl">
+    // Le rembourrage lateral descend au niveau de chaque bloc, et non sur le
+    // `<main>` : la barre collante doit pouvoir occuper toute la largeur de
+    // l'ecran, ce qu'un conteneur centre lui interdirait.
+    <main className="min-h-screen pb-10">
+      <div className="mx-auto max-w-6xl px-4 pt-10 sm:px-8 lg:px-12">
         <header className="mb-6 flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="mb-1 font-mono text-xs uppercase tracking-widest text-muted-foreground">Ma sélection</p>
-            <h1 className="text-3xl font-semibold tracking-tight text-foreground text-balance sm:text-4xl">
-              {LIST_LABELS[list]}
-            </h1>
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <h1 className="text-3xl font-semibold tracking-tight text-foreground text-balance sm:text-4xl">
+                {LIST_LABELS[list]}
+              </h1>
+              {/* Discret, a cote du titre : le manifesto se lit une fois, il n'a
+                  pas a occuper la page en permanence. */}
+              <button
+                type="button"
+                onClick={() => setAboutOpen(true)}
+                className="inline-flex items-center gap-1 rounded-md text-sm text-muted-foreground underline decoration-dotted underline-offset-4 outline-none ring-ring transition-colors hover:text-foreground focus-visible:ring-2"
+              >
+                <Info className="h-3.5 w-3.5" aria-hidden="true" />À propos
+              </button>
+            </div>
             <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
               {albums.length} album{albums.length > 1 ? "s" : ""} · {SUBTITLES[list]}
             </p>
@@ -432,32 +449,55 @@ export function AlbumsView({ list }: Props) {
           </div>
         </header>
 
-        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <ListTabs counts={counts} />
-          {!editMode && <AlbumSearch value={query} onChange={setQuery} resultCount={visible.length} />}
-        </div>
+      </div>
 
-        {!editMode && (showGenres || showDecades) && (
-          <div className="mb-6 flex flex-col gap-3">
-            <FacetFilter
-              label="Genres"
-              items={genreItems}
-              total={forGenres.length}
-              selected={genre}
-              onSelect={setGenre}
-              collapseAfter={8}
-            />
-            {showGenres && showDecades && <div className="h-px bg-border/60" aria-hidden="true" />}
-            {/* Les decennies sont peu nombreuses et ordonnees : rien a replier. */}
-            <FacetFilter
-              label="Décennie"
-              items={decadeItems}
-              total={forDecades.length}
-              selected={decade}
-              onSelect={setDecade}
-            />
+      {/*
+        Barre de navigation et de filtres, maintenue en haut au defilement.
+
+        Elle s'etend sur toute la largeur de la fenetre et centre son propre
+        contenu, plutot que de vivre dans le conteneur centre : sinon les
+        pochettes defileraient dans les gouttieres restees transparentes de part
+        et d'autre — d'autant plus larges que l'ecran l'est.
+
+        Le `<header>` (titre, boutons) reste dans le flux : il n'a rien a faire
+        ici une fois qu'on parcourt la grille.
+      */}
+      <div className="sticky top-0 z-30 mb-6 border-b border-border bg-background/95 backdrop-blur">
+        <div className="mx-auto flex max-w-6xl flex-col gap-1.5 px-4 py-1.5 sm:px-8 sm:py-2 lg:px-12">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <ListTabs counts={counts} />
+            {!editMode && <AlbumSearch value={query} onChange={setQuery} resultCount={visible.length} />}
           </div>
-        )}
+
+          {!editMode && (showGenres || showDecades) && (
+            <div className="flex flex-col gap-1.5">
+              <FacetFilter
+                label="Genres"
+                items={genreItems}
+                total={forGenres.length}
+                selected={genre}
+                onSelect={setGenre}
+                collapseAfter={8}
+              />
+              {/* Separateur masque sur telephone : chaque pixel de la barre y est
+                  pris sur la grille. */}
+              {showGenres && showDecades && (
+                <div className="hidden h-px bg-border/60 sm:block" aria-hidden="true" />
+              )}
+              {/* Les decennies sont peu nombreuses et ordonnees : rien a replier. */}
+              <FacetFilter
+                label="Décennie"
+                items={decadeItems}
+                total={forDecades.length}
+                selected={decade}
+                onSelect={setDecade}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-6xl px-4 sm:px-8 lg:px-12">
 
         {!editMode && searching && (
           <p className="mb-5 text-sm text-muted-foreground">
@@ -578,6 +618,8 @@ export function AlbumsView({ list }: Props) {
           onSubmit={(data) => void handleSubmit(data)}
         />
       )}
+
+      <AboutDialog open={aboutOpen} onClose={() => setAboutOpen(false)} />
 
       <AlbumDetail
         album={detailEntry?.album ?? null}
