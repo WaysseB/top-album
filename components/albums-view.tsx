@@ -401,7 +401,7 @@ export function AlbumsView({ list }: Props) {
                 ).join(", ")}`}
               >
                 <Shuffle className="h-4 w-4" />
-                Au hasard
+                Découvrir un album au hasard
               </Button>
             )}
 
