@@ -44,7 +44,7 @@ const SUBTITLES: Record<AlbumList, string> = {
   top: "La bande son de ma vie. Les albums les plus importants. Ceux qui passent le plus souvent dans mes oreilles.",
   // Ces listes ont un ordre, simplement il ne s'affiche pas : promettre
   // « sans ordre de préférence » serait devenu faux.
-  wannabe: "Il y a le top 100, et ceux qui auraient aimé y être. D'excellents albums, qui sont aux portes du top.",
+  wannabe: "Il y a ceux qui sont dans mon top 100, et ceux qui y sont presque. Mais genre, presque.",
   ost: "Mes musiques de jeux vidéo préférées. Parce que le bande son est parfois aussi importante que le gameplay.",
   vinyl: "Ma collection de vinyles, histoire de flex un peu (synchro depuis Discogs).",
 }
