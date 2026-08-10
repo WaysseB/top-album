@@ -15,9 +15,9 @@ export const INTRO_TITLE = "À propos de ce classement"
 export const INTRO_PARAGRAPHS: string[] = [
   "Moi, j'aime les albums.",
 
-  "Déjà, c'est une pochette. Un visuel qui claque, qui marque, qui dérange parfois, qui raconte (le plus souvent) quelque chose. Parfois c'est juste un logo, une photo célèbre, une mascotte ou même un animal. Parfois elle vieillit mal, parfois elle reste fraîche, même des dizaines d'années après sa sortie. Et de temps en temps, c'est tellement iconique que ça finit sur des t-shirts, sur des tasses ou accroché à des murs. On te parle, "le bébé de Nirvana".",
+  "Déjà, c'est une pochette. Un visuel qui claque, qui marque, qui dérange parfois, qui raconte (le plus souvent) quelque chose. Parfois c'est juste un logo, une photo célèbre, une mascotte ou même un animal. Parfois elle vieillit mal, parfois elle reste fraîche, même des dizaines d'années après sa sortie. Et de temps en temps, c'est tellement iconique que ça finit sur des t-shirts, sur des tasses ou accroché à des murs. On te parle, 'le bébé de Nirvana'.",
 
-  "C'est aussi un titre. Qu'il soit éponyme ou à rallonge, un titre c'est une synthèse de ce que représente l'album, de ce qu'il veut raconter. Certains privilégient l'efficacité (voire le secret) à la créativité mais un bon titre, ça reste en tête. Que ce soit le "Untitled" de Led Zeppelin ou l'"Abbey Road" des Beatles.",
+  "C'est aussi un titre. Qu'il soit éponyme ou à rallonge, un titre c'est une synthèse de ce que représente l'album, de ce qu'il veut raconter. Certains privilégient l'efficacité (voire le secret) à la créativité mais un bon titre, ça reste en tête. Que ce soit le 'Untitled' de Led Zeppelin ou l''Abbey Road' des Beatles.",
 
   "C'est un son, une texture, un grain particulier qui fait qu'on le reconnaît d'un coup d'oeil, ou d'oreille. Les amplis qui crachent, les guitares qui saturent, les batteries qui pulsent... Chaque décennie a son son, son style de production, sa signature sonore.",
 
