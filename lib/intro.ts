@@ -13,15 +13,33 @@
 export const INTRO_TITLE = "À propos de ce classement"
 
 export const INTRO_PARAGRAPHS: string[] = [
-  "Ce classement n'a rien d'objectif, et c'est tout son intérêt. Il ne prétend pas dire quels sont les cent meilleurs albums jamais enregistrés — seulement lesquels comptent pour moi. Ce n'est pas la même chose, et je préfère le préciser d'entrée.",
+  "Moi, j'aime les albums.",
 
-  "Les chiffres sont assez bavards. Les années 90 et 2000 pèsent plus de la moitié de la sélection, l'Alternative Rock revient sur près d'un album sur quatre, et Black Sabbath figure deux fois dans les dix premiers. Ce n'est pas une posture : c'est ce qui tournait quand j'ai commencé à écouter de la musique pour de bon, et ça ne m'a jamais vraiment lâché.",
+  "Déjà, c'est une pochette. Un visuel qui claque, qui marque, qui dérange parfois, qui raconte (le plus souvent) quelque chose. 
+Parfois c'est juste un logo, une photo célèbre, une mascotte ou même un animal. Parfois elle vieillit mal, parfois elle reste fraîche, même des dizaines d'années après sa sortie.
+Et de temps en temps, c'est tellement iconique que ça finit sur des t-shirts, sur des tasses ou accroché à des murs. On te parle, "le bébé de Nirvana".",
 
-  "En tête, pourtant, il y a Discovery. Un disque de robots au milieu d'une liste tenue par les guitares, avec Mezzanine cinquième pour des raisons voisines. Je n'ai jamais cherché à résoudre cette contradiction — elle dit sans doute quelque chose de plus juste que la moyenne des genres.",
+  "C'est aussi un titre. Qu'il soit éponyme ou à rallonge, un titre c'est une synthèse de ce que représente l'album, de ce qu'il veut raconter.
+Certains privilégient l'efficacité (voire le secret) à la créativité mais un bon titre, ça reste en tête.
+Que ce soit le "Untitled" de Led Zeppelin ou l'"Abbey Road" des Beatles.",
 
-  "Les absents ne sont pas des oublis. Un album que je respecte sans jamais y revenir n'a rien à faire ici. La seule question que je me pose devant chaque entrée, c'est si je le remets encore aujourd'hui.",
+  "C'est un son, une texture, un grain particulier qui fait qu'on le reconnaît d'un coup d'oeil, ou d'oreille.
+Les amplis qui crachent, les guitares qui saturent, les batteries qui pulsent...
+Chaque décennie a son son, son style de production, sa signature sonore.",
 
-  "Les Wannabe sont les prétendants : des albums qui frappent à la porte du Top sans y être entrés. Les OST rassemblent les musiques de jeux vidéo, qui méritaient leur propre page. Les Vinyles, eux, ne relèvent pas du goût mais de la possession — c'est un inventaire, et il est tenu à jour depuis Discogs.",
+  "C'est une liste de morceaux. Un enchaînement de pistes qui forment parfois une histoire, ou parfois rien du tout.
+Elle est parfois choisie au hasard, sur un coup de tête, ou bien ficelée de A à Z dans les moindres détails. 
+Mais comment ne pas aimer quand plusieurs morceaux se suivent, se répondent ?",
 
-  "L'ordre bouge, et il continuera de bouger. Un classement définitif serait un classement mort.",
+  "Dans un album, c'est aussi la vie d'un(e) artiste, ou d'un groupe qui est temoignée. 
+Que ce soit la fougue de la jeunesse ou la sagesse de l'âge, c'est une photo de l'instant qui dit quelque chose de son contexte.",
+
+  "Un album, c'est un ensemble de choix, de décisions artistiques, prises à un instant T.
+C'est un voyage, une capsule temporelle. Y passer l'espace de 30 à 45 minutes, c'est se replonger dans des souvenirs, dans une époque.
+C'est le meilleur moyen de découvrir ce que ces artistes ont voulu partager leur art au plus grand nombre.",
+
+  "Bref, c'est pour ça que j'aime les albums.
+Alors, voilà mon top, en toute subjectivité, assumée et revendiquée.",
+
+ "Wes",
 ]
