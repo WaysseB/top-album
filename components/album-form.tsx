@@ -13,6 +13,7 @@ import {
   type AlbumList,
 } from "@/lib/albums"
 import { Button } from "@/components/ui/button"
+import { VinylPicker } from "@/components/vinyl-picker"
 import { useModal } from "@/hooks/use-modal"
 import { parseDeezerRef } from "@/lib/deezer"
 import { X } from "lucide-react"
@@ -22,6 +23,10 @@ type Props = {
   initial?: Album | null
   /** Liste pre-selectionnee a la creation : celle de l'onglet courant. */
   defaultList: AlbumList
+  /** La collection, pour proposer une liaison manuelle. */
+  vinyls: Album[]
+  /** Le vinyle deja rapproche par le calcul, s'il y en a un. */
+  automaticVinyl: Album | null
   onClose: () => void
   onSubmit: (data: AlbumInput) => void
 }
@@ -40,13 +45,23 @@ const EMPTY = {
   format: "",
 }
 
-export function AlbumForm({ open, initial, defaultList, onClose, onSubmit }: Props) {
+export function AlbumForm({
+  open,
+  initial,
+  defaultList,
+  vinyls,
+  automaticVinyl,
+  onClose,
+  onSubmit,
+}: Props) {
   const [form, setForm] = useState(EMPTY)
   const [list, setList] = useState<AlbumList>(defaultList)
+  const [vinylId, setVinylId] = useState<string | undefined>(undefined)
 
   useEffect(() => {
     if (!open) return
     setList(initial?.list ?? defaultList)
+    setVinylId(initial?.vinylId)
     setForm(
       initial
         ? {
@@ -90,6 +105,7 @@ export function AlbumForm({ open, initial, defaultList, onClose, onSubmit }: Pro
       appleMusicUrl: form.appleMusicUrl.trim() || undefined,
       genres: parseGenres(form.genres),
       format: form.format.trim() || undefined,
+      vinylId,
     })
     onClose()
   }
@@ -218,6 +234,22 @@ export function AlbumForm({ open, initial, defaultList, onClose, onSubmit }: Pro
                   ))}
                 </select>
               </div>
+              {/* La liaison va d'un album vers un vinyle : sur la collection
+                  elle-meme, elle n'aurait pas de sens. */}
+              {list !== "vinyl" && vinyls.length > 0 && (
+                <div className="flex flex-col gap-1.5 sm:col-span-2">
+                  <label className="text-xs font-medium text-muted-foreground">
+                    Vinyle correspondant
+                  </label>
+                  <VinylPicker
+                    vinyls={vinyls}
+                    value={vinylId}
+                    onChange={setVinylId}
+                    automatic={automaticVinyl}
+                  />
+                </div>
+              )}
+
               {/* Le support ne concerne que la collection physique : partout
                   ailleurs, ce champ n'aurait rien a decrire. */}
               {list === "vinyl" && (

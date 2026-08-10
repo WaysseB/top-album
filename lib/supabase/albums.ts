@@ -112,6 +112,7 @@ export async function insertAlbum(input: AlbumInput): Promise<Album> {
       apple_music_url: album.appleMusicUrl ?? null,
       genres: album.genres.length ? album.genres : null,
       format: album.format ?? null,
+      vinyl_id: album.vinylId ?? null,
       position: await nextPosition(album.list),
     })
     .select(ALBUM_COLUMNS)
@@ -147,6 +148,7 @@ export async function updateAlbum(id: string, input: AlbumInput): Promise<Album>
     apple_music_url: album.appleMusicUrl ?? null,
     genres: album.genres.length ? album.genres : null,
     format: album.format ?? null,
+    vinyl_id: album.vinylId ?? null,
   }
 
   // Changer de liste replace l'album en fin de liste cible : conserver son

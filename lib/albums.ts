@@ -80,6 +80,11 @@ export type Album = {
    * Reissue ». Vide hors collection vinyle.
    */
   format?: string
+  /**
+   * Vinyle designe a la main, quand le rapprochement automatique echoue.
+   * Prioritaire sur celui-ci ; vide, le titre normalise fait foi.
+   */
+  vinylId?: string
 }
 
 /** Un album tel que saisi dans le formulaire : sans id, celui-ci est genere en base. */
@@ -100,11 +105,12 @@ export type AlbumRow = {
   apple_music_url: string | null
   genres: string[] | null
   format: string | null
+  vinyl_id: string | null
   position: number
 }
 
 export const ALBUM_COLUMNS =
-  "id, list, title, artist, year, cover, note, favorite_track, deezer_url, spotify_url, apple_music_url, genres, format, position"
+  "id, list, title, artist, year, cover, note, favorite_track, deezer_url, spotify_url, apple_music_url, genres, format, vinyl_id, position"
 
 export function rowToAlbum(row: AlbumRow): Album {
   return {
@@ -121,6 +127,7 @@ export function rowToAlbum(row: AlbumRow): Album {
     appleMusicUrl: row.apple_music_url ?? undefined,
     genres: row.genres ?? [],
     format: row.format ?? undefined,
+    vinylId: row.vinyl_id ?? undefined,
   }
 }
 
@@ -174,6 +181,8 @@ export function normalizeAlbumInput(input: AlbumInput): AlbumInput {
     appleMusicUrl: cleanUrl(input.appleMusicUrl) || undefined,
     genres: parseGenres(formatGenres(input.genres)),
     format: format || undefined,
+    // Un album de la collection ne se lie pas a un vinyle : il en est un.
+    vinylId: input.list === "vinyl" ? undefined : optionalUuid(input.vinylId),
   }
 }
 
@@ -251,6 +260,27 @@ export function indexByMatchKey(albums: Album[]): Map<string, Album[]> {
  * d'artistes differents — l'artiste tranche. Sans lui pour departager, on
  * s'abstient plutot que de rapprocher au hasard.
  */
+/**
+ * Le vinyle d'un album : celui designe a la main, sinon celui que le titre
+ * permet de retrouver.
+ *
+ * La liaison manuelle prime toujours. Elle n'existe que pour les cas ou le
+ * calcul se trompe ou renonce ; la laisser perdre viderait le champ de son sens.
+ */
+export function resolveVinyl(
+  album: Album,
+  byId: Map<string, Album>,
+  index: Map<string, Album[]>,
+): Album | null {
+  if (album.list === "vinyl") return null
+  // Un identifiant qui ne resout plus — vinyle supprime — retombe sur le calcul.
+  if (album.vinylId) {
+    const linked = byId.get(album.vinylId)
+    if (linked) return linked
+  }
+  return findSameAlbum(album, index)
+}
+
 export function findSameAlbum(album: Album, index: Map<string, Album[]>): Album | null {
   const candidates = index.get(matchKey(album))
   if (!candidates?.length) return null
@@ -291,6 +321,11 @@ export function formatGenres(genres: string[] | undefined): string {
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/** Identifiant facultatif : vide ou invalide vaut « aucune liaison ». */
+function optionalUuid(id: unknown): string | undefined {
+  return typeof id === "string" && UUID_RE.test(id) ? id : undefined
+}
 
 export function assertUuid(id: unknown): string {
   if (typeof id !== "string" || !UUID_RE.test(id)) {

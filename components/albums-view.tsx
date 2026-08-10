@@ -11,6 +11,7 @@ import {
   fold,
   indexByMatchKey,
   LIST_SHOWS_RANK,
+  resolveVinyl,
   LIST_LABELS,
   LIST_TAB_LABELS,
   NO_DECADE,
@@ -203,12 +204,20 @@ export function AlbumsView({ list }: Props) {
   const detailEntry = allEntries.find(({ album }) => album.id === detailId) ?? null
 
   const vinylIndex = useMemo(() => indexByMatchKey(albumsByList.vinyl), [albumsByList.vinyl])
+  const vinylsById = useMemo(
+    () => new Map(albumsByList.vinyl.map((album) => [album.id, album])),
+    [albumsByList.vinyl],
+  )
 
-  // Inutile de signaler la possession sur la liste des vinyles elle-meme.
-  const ownedVinyl =
-    detailEntry && detailEntry.list !== "vinyl"
-      ? findSameAlbum(detailEntry.album, vinylIndex)
-      : null
+  // Inutile de signaler la possession sur la liste des vinyles elle-meme :
+  // `resolveVinyl` s'en charge.
+  const ownedVinyl = detailEntry
+    ? resolveVinyl(detailEntry.album, vinylsById, vinylIndex)
+    : null
+
+  // Ce que le calcul propose pour l'album en cours d'edition, montre dans le
+  // formulaire pour eviter une liaison manuelle inutile.
+  const automaticVinyl = editing ? findSameAlbum(editing, vinylIndex) : null
 
   /**
    * Le tirage ignore l'onglet — c'est un « surprends-moi », pas un echantillon
@@ -386,30 +395,35 @@ export function AlbumsView({ list }: Props) {
     // l'ecran, ce qu'un conteneur centre lui interdirait.
     <main className="min-h-screen pb-10">
       <div className="mx-auto max-w-6xl px-4 pt-10 sm:px-8 lg:px-12">
-        <header className="mb-6 flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="mb-1 font-mono text-xs uppercase tracking-widest text-muted-foreground">Wes</p>
-            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <header className="mb-6 flex flex-col gap-3">
+          {/*
+            Ligne de surtitre, sur toute la largeur : « Wes » a gauche, le lien
+            colle au bord droit. Loge dans la colonne de titre, il se serait cale
+            sur la largeur du sous-titre et aurait flotte au milieu de l'en-tete.
+          */}
+          <div className="flex items-center justify-between gap-4">
+            <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Wes</p>
+            <button
+              type="button"
+              onClick={() => setAboutOpen(true)}
+              className="inline-flex shrink-0 items-center gap-1 rounded-md text-sm text-muted-foreground underline decoration-dotted underline-offset-4 outline-none ring-ring transition-colors hover:text-foreground focus-visible:ring-2"
+            >
+              <Info className="h-3.5 w-3.5" aria-hidden="true" />À propos
+            </button>
+          </div>
+
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+            <div>
               <h1 className="text-3xl font-semibold tracking-tight text-foreground text-balance sm:text-4xl">
                 {LIST_LABELS[list]}
               </h1>
-              {/* Discret, a cote du titre : le manifesto se lit une fois, il n'a
-                  pas a occuper la page en permanence. */}
-              <button
-                type="button"
-                onClick={() => setAboutOpen(true)}
-                className="inline-flex items-center gap-1 rounded-md text-sm text-muted-foreground underline decoration-dotted underline-offset-4 outline-none ring-ring transition-colors hover:text-foreground focus-visible:ring-2"
-              >
-                <Info className="h-3.5 w-3.5" aria-hidden="true" />À propos
-              </button>
+              <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
+                {albums.length} album{albums.length > 1 ? "s" : ""} · {SUBTITLES[list]}
+              </p>
             </div>
-            <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
-              {albums.length} album{albums.length > 1 ? "s" : ""} · {SUBTITLES[list]}
-            </p>
-          </div>
 
-          {/* Les boutons passent a h-10 sur mobile : 32 px se ratent au pouce. */}
-          <div className="flex flex-wrap items-center gap-2">
+            {/* Les boutons passent a h-10 sur mobile : 32 px se ratent au pouce. */}
+            <div className="flex flex-wrap items-center gap-2">
             {!editMode && (
               <Button
                 variant="outline"
@@ -449,9 +463,9 @@ export function AlbumsView({ list }: Props) {
                 </Button>
               </>
             )}
+            </div>
           </div>
         </header>
-
       </div>
 
       {/*
@@ -622,6 +636,8 @@ export function AlbumsView({ list }: Props) {
           open={formOpen}
           initial={editing}
           defaultList={list}
+          vinyls={albumsByList.vinyl}
+          automaticVinyl={automaticVinyl}
           onClose={() => setFormOpen(false)}
           onSubmit={(data) => void handleSubmit(data)}
         />

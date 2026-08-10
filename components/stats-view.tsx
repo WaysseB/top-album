@@ -6,12 +6,12 @@ import {
   ALBUM_LISTS,
   CURATED_LISTS,
   decadeLabel,
-  findSameAlbum,
   indexByMatchKey,
   LIST_LABELS,
   LIST_PATHS,
   LIST_TAB_LABELS,
   NO_DECADE,
+  resolveVinyl,
   type Album,
   type AlbumList,
 } from "@/lib/albums"
@@ -254,22 +254,26 @@ export function StatsView() {
     const vinyles = albumsByList.vinyl
     const restants = new Set(vinyles.map((album) => album.id))
 
+    // Le parcours va de l'album vers le vinyle, dans le sens ou la liaison
+    // manuelle est enregistree — sinon celle-ci serait ignoree ici.
+    const index = indexByMatchKey(vinyles)
+    const byId = new Map(vinyles.map((album) => [album.id, album]))
+
     const parListe = CURATED_LISTS.map((liste) => {
-      const index = indexByMatchKey(albumsByList[liste])
       const trouves: RowAlbum[] = []
 
-      for (const vinyle of vinyles) {
-        const jumeau = findSameAlbum(vinyle, index)
-        if (!jumeau) continue
+      for (const album of albumsByList[liste]) {
+        const vinyle = resolveVinyl(album, byId, index)
+        if (!vinyle) continue
         restants.delete(vinyle.id)
         trouves.push({
-          id: vinyle.id,
-          artist: vinyle.artist,
-          title: vinyle.title,
+          id: album.id,
+          artist: album.artist,
+          title: album.title,
           badge: LIST_TAB_LABELS[liste],
           // On pointe vers l'album dans SA liste : c'est la qu'il porte son
           // rang, et que la pastille de possession a un sens.
-          href: `${LIST_PATHS[liste]}?album=${jumeau.id}`,
+          href: `${LIST_PATHS[liste]}?album=${album.id}`,
         })
       }
 
