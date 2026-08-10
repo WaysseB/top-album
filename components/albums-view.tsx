@@ -25,6 +25,7 @@ import { AlbumDetail } from "@/components/album-detail"
 import { AlbumSearch } from "@/components/album-search"
 import { FacetFilter, type FacetItem } from "@/components/facet-filter"
 import { ListTabs } from "@/components/list-tabs"
+import { StickyBar } from "@/components/sticky-bar"
 import { Button } from "@/components/ui/button"
 import { AboutDialog } from "@/components/about-dialog"
 import { Check, Info, ListOrdered, LogOut, Plus, Shuffle } from "lucide-react"
@@ -459,19 +460,13 @@ export function AlbumsView({ list }: Props) {
         pochettes defileraient dans les gouttieres restees transparentes de part
         et d'autre — d'autant plus larges que l'ecran l'est.
 
+        Fond et bordure n'apparaissent qu'une fois la barre collee, voir
+        `StickyBar` : au repos elle prolonge l'en-tete au lieu de l'en separer.
+
         Le `<header>` (titre, boutons) reste dans le flux : il n'a rien a faire
         ici une fois qu'on parcourt la grille.
       */}
-      {/*
-        `top` vaut la hauteur de la zone systeme, et non zero.
-
-        Installee sur iPhone, l'application s'affiche sous la barre d'etat.
-        Le `padding-top` du `body` protege le contenu qui defile, mais un
-        element colle s'y soustrait : avec `top: 0`, les onglets venaient se
-        ranger derriere l'heure et la batterie. La valeur vaut 0 sur un ecran
-        sans encoche, le comportement est donc inchange ailleurs.
-      */}
-      <div className="sticky top-[env(safe-area-inset-top)] z-30 mb-6 border-b border-border bg-background/95 backdrop-blur">
+      <StickyBar className="mb-6">
         <div className="mx-auto flex max-w-6xl flex-col gap-1.5 px-4 py-1.5 sm:px-8 sm:py-2 lg:px-12">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <ListTabs counts={counts} />
@@ -504,7 +499,7 @@ export function AlbumsView({ list }: Props) {
             </div>
           )}
         </div>
-      </div>
+      </StickyBar>
 
       <div className="mx-auto max-w-6xl px-4 sm:px-8 lg:px-12">
 
