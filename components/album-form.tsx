@@ -237,7 +237,9 @@ export function AlbumForm({
               {/* La liaison va d'un album vers un vinyle : sur la collection
                   elle-meme, elle n'aurait pas de sens. */}
               {list !== "vinyl" && vinyls.length > 0 && (
-                <div className="flex flex-col gap-1.5 sm:col-span-2">
+                // Pleine largeur : le champ porte une recherche et sa liste de
+                // resultats, ou les titres de pressage sont longs.
+                <div className="flex flex-col gap-1.5 sm:col-span-3">
                   <label className="text-xs font-medium text-muted-foreground">
                     Vinyle correspondant
                   </label>
