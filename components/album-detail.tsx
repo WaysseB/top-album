@@ -234,10 +234,10 @@ export function AlbumDetail({
                   className="mb-2 inline-flex items-center gap-1 rounded-full border border-primary/60 bg-primary/15 px-2 py-0.5 text-xs font-medium text-foreground"
                   // Le support exact est trop long pour la pastille, mais c'est
                   // l'information qu'on cherche en la voyant.
-                  title={ownedVinyl.format || "Dans ma collection"}
+                  title={ownedVinyl.format || "Présent dans la collection"}
                 >
                   <Disc3 className="h-3 w-3" aria-hidden="true" />
-                  Je l&apos;ai en vinyle
+                  Possédé en vinyle
                 </span>
               )}
               <h2 className="text-xl font-semibold leading-tight text-foreground text-balance">{album.title}</h2>
