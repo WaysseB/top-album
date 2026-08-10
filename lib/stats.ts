@@ -1,4 +1,4 @@
-import { decadeOf, NO_DECADE, type Album } from "@/lib/albums"
+import { decadeOf, fold, NO_DECADE, type Album } from "@/lib/albums"
 
 export type Tally = {
   /** Cle de regroupement, insensible a la casse et aux accents. */
@@ -45,15 +45,6 @@ const NOT_AN_ARTIST = new Set([
   "compilation",
   "unknown artist",
 ])
-
-/** Repli des accents et de la casse : « Bjork » et « Björk » sont le meme artiste. */
-function fold(value: string): string {
-  return value
-    .normalize("NFD")
-    .replace(/\p{M}/gu, "")
-    .toLowerCase()
-    .trim()
-}
 
 /**
  * Regroupe des libelles sur leur forme repliee, en gardant l'orthographe la

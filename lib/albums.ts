@@ -177,6 +177,89 @@ export function normalizeAlbumInput(input: AlbumInput): AlbumInput {
   }
 }
 
+/** Repli des accents et de la casse. « Bjork » et « Björk » se rejoignent. */
+export function fold(value: string): string {
+  return (value ?? "")
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .toLowerCase()
+    .trim()
+}
+
+/** Mentions d'edition ou de bande originale, qui ne distinguent pas un disque. */
+const EDITION_MARKERS =
+  /(bande originale|original\s+(motion\s+picture\s+|video\s+game\s+|series\s+|game\s+)?(sound\s?track|score|sound\s+collection)|complete\s+(original\s+)?(score|sound\s+collection|soundtrack)|sound\s?track|o\.?s\.?t\.?|anniversary edition|deluxe edition|vinyl (set|edition)|remaster(ed)?|reissue)/
+
+/**
+ * Cle de rapprochement d'un album d'une liste a l'autre.
+ *
+ * Le titre seul, sans l'artiste : sur les bandes originales, le credit est
+ * instable d'une source a l'autre. « Castlevania » est signe Kinuyo Yamashita
+ * a la saisie et Konami Kukeiha Club chez Discogs ; « Tekken 3 » passe de
+ * Nobuyoshi Sano a Namco Sounds. Exiger l'egalite des artistes condamnait la
+ * moitie des rapprochements — mesure sur la collection : 56 contre 71.
+ *
+ * Le titre est ramene a sa forme nue : groupes entre parentheses, mentions
+ * d'edition et suffixes de bande originale retires, « & » ramene a « and », et
+ * depouillement final des caracteres non latins — ce qui fait au passage
+ * rejoindre « Comix Zone コミックスゾーン » et « Comix Zone ».
+ */
+export function matchKey(album: Pick<Album, "title">): string {
+  let title = fold(album.title)
+    .replace(/[（(\[<][^)）\]>]*[)）\]>]/g, " ")
+    .replace(/&/g, " and ")
+
+  // Les segments de queue sont retires depuis la fin, tant qu'ils portent une
+  // mention d'edition. Couper au premier « : » amputerait « Castlevania:
+  // Symphony of the Night » de ce qui l'identifie.
+  for (let pass = 0; pass < 4; pass++) {
+    const split = title.match(/^(.*?)\s*[:\-–—]\s*([^:\-–—]+)$/)
+    if (split && EDITION_MARKERS.test(split[2])) {
+      title = split[1]
+      continue
+    }
+
+    // Mention accolee sans separateur : « Tekken 3 Original Soundtrack ».
+    const trimmed = title.replace(
+      /\s+(original\s+)?(motion\s+picture\s+|video\s+game\s+|series\s+|game\s+)?(sound\s?track|score|sound\s+collection)\s*$/,
+      "",
+    )
+    if (trimmed === title) break
+    title = trimmed
+  }
+
+  return title.replace(/[^a-z0-9]/g, "")
+}
+
+/** Regroupe des albums par cle de rapprochement. */
+export function indexByMatchKey(albums: Album[]): Map<string, Album[]> {
+  const index = new Map<string, Album[]>()
+  for (const album of albums) {
+    const key = matchKey(album)
+    if (!key) continue
+    const bucket = index.get(key)
+    if (bucket) bucket.push(album)
+    else index.set(key, [album])
+  }
+  return index
+}
+
+/**
+ * Retrouve un album dans un index construit sur une autre liste.
+ *
+ * Quand plusieurs disques partagent le meme titre nu — deux homonymes
+ * d'artistes differents — l'artiste tranche. Sans lui pour departager, on
+ * s'abstient plutot que de rapprocher au hasard.
+ */
+export function findSameAlbum(album: Album, index: Map<string, Album[]>): Album | null {
+  const candidates = index.get(matchKey(album))
+  if (!candidates?.length) return null
+  if (candidates.length === 1) return candidates[0]
+
+  const artist = fold(album.artist)
+  return candidates.find((c) => fold(c.artist) === artist) ?? null
+}
+
 /** Cle de facette pour les albums dont l'annee est inconnue. */
 export const NO_DECADE = "none"
 

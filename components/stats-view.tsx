@@ -6,6 +6,9 @@ import {
   ALBUM_LISTS,
   CURATED_LISTS,
   decadeLabel,
+  findSameAlbum,
+  indexByMatchKey,
+  LIST_LABELS,
   LIST_PATHS,
   LIST_TAB_LABELS,
   NO_DECADE,
@@ -97,9 +100,31 @@ function BarList({
  * Chaque album pointe vers sa liste avec la recherche pre-remplie sur son titre :
  * on arrive directement dessus, prêt à ouvrir la fiche et à la compléter.
  */
-function CompletenessRow({ item, total }: { item: Completeness; total: number }) {
-  const { label, filled, missing } = item
-  const share = total > 0 ? Math.round((filled / total) * 100) : 0
+type RowAlbum = { id: string; artist: string; title: string; badge: string; href: string }
+
+/**
+ * Ligne chiffree, depliable sur les albums concernes.
+ *
+ * Partagee par les deux blocs de la page : la completude des fiches et le
+ * croisement de la collection avec les listes. Meme presentation, meme barre,
+ * meme mecanique de repli — seule change la nature de ce qui est compte.
+ */
+function DisclosureRow({
+  label,
+  note,
+  count,
+  total,
+  albums,
+}: {
+  label: string
+  /** Ce que la liste depliee contient, ex. « a completer ». */
+  note: string
+  /** Numerateur de la barre. */
+  count: number
+  total: number
+  albums: RowAlbum[]
+}) {
+  const share = total > 0 ? Math.round((count / total) * 100) : 0
 
   /**
    * La liste n'est montee qu'une fois ouverte.
@@ -119,20 +144,20 @@ function CompletenessRow({ item, total }: { item: Completeness; total: number })
     </div>
   )
 
-  const heading = (
-    <div className="flex items-baseline justify-between gap-3">
-      <span className="text-sm text-foreground">{label}</span>
-      <span className="font-mono text-xs text-muted-foreground tabular-nums">
-        {filled}/{total} · {share} %
-      </span>
-    </div>
+  const chiffres = (
+    <span className="font-mono text-xs text-muted-foreground tabular-nums">
+      {count}/{total} · {share} %
+    </span>
   )
 
-  // Rien a corriger : pas de fleche ni de zone cliquable qui ne menerait nulle part.
-  if (missing.length === 0) {
+  // Liste vide : pas de fleche ni de zone cliquable qui ne menerait nulle part.
+  if (albums.length === 0) {
     return (
       <li className="flex flex-col gap-1 py-1.5">
-        {heading}
+        <div className="flex items-baseline justify-between gap-3">
+          <span className="text-sm text-foreground">{label}</span>
+          {chiffres}
+        </div>
         {bar}
       </li>
     )
@@ -150,12 +175,10 @@ function CompletenessRow({ item, total }: { item: Completeness; total: number })
               />
               {label}
               <span className="text-xs text-muted-foreground">
-                — {missing.length} à compléter
+                — {albums.length} {note}
               </span>
             </span>
-            <span className="font-mono text-xs text-muted-foreground tabular-nums">
-              {filled}/{total} · {share} %
-            </span>
+            {chiffres}
           </div>
           {bar}
         </summary>
@@ -166,10 +189,10 @@ function CompletenessRow({ item, total }: { item: Completeness; total: number })
           className="mb-2 ml-5 max-h-64 space-y-px overflow-y-auto overscroll-contain rounded-md border border-border bg-background/50 p-1.5"
         >
           {open &&
-            missing.map((album) => (
+            albums.map((album) => (
               <li key={album.id}>
                 <Link
-                  href={`${LIST_PATHS[album.list]}?q=${encodeURIComponent(album.title)}`}
+                  href={album.href}
                   className="flex items-baseline justify-between gap-3 rounded px-2 py-1.5 text-xs outline-none ring-ring transition-colors hover:bg-secondary focus-visible:ring-2"
                 >
                   <span className="min-w-0 truncate text-foreground">
@@ -178,7 +201,7 @@ function CompletenessRow({ item, total }: { item: Completeness; total: number })
                     {album.title}
                   </span>
                   <span className="shrink-0 font-mono text-[0.65rem] uppercase tracking-wider text-muted-foreground">
-                    {LIST_TAB_LABELS[album.list]}
+                    {album.badge}
                   </span>
                 </Link>
               </li>
@@ -187,6 +210,18 @@ function CompletenessRow({ item, total }: { item: Completeness; total: number })
       </details>
     </li>
   )
+}
+
+/** Adapte une fiche a completer en element de ligne depliable. */
+function toMissingItem(album: Album): RowAlbum {
+  return {
+    id: album.id,
+    artist: album.artist,
+    title: album.title,
+    badge: LIST_TAB_LABELS[album.list],
+    // La recherche pre-remplie sur le titre amene directement dessus.
+    href: `${LIST_PATHS[album.list]}?q=${encodeURIComponent(album.title)}`,
+  }
 }
 
 export function StatsView() {
@@ -207,6 +242,52 @@ export function StatsView() {
   )
 
   const stats = useMemo(() => computeStats(albums), [albums])
+
+  /**
+   * Croisement de la collection avec les listes de gout.
+   *
+   * Ce que la page ne disait pas jusqu'ici : parmi les disques possedes,
+   * lesquels figurent aussi dans le classement, et lesquels n'appartiennent
+   * qu'a l'inventaire. C'est la lecture propre au perimetre « Vinyles ».
+   */
+  const croisement = useMemo(() => {
+    const vinyles = albumsByList.vinyl
+    const restants = new Set(vinyles.map((album) => album.id))
+
+    const parListe = CURATED_LISTS.map((liste) => {
+      const index = indexByMatchKey(albumsByList[liste])
+      const trouves: RowAlbum[] = []
+
+      for (const vinyle of vinyles) {
+        const jumeau = findSameAlbum(vinyle, index)
+        if (!jumeau) continue
+        restants.delete(vinyle.id)
+        trouves.push({
+          id: vinyle.id,
+          artist: vinyle.artist,
+          title: vinyle.title,
+          badge: LIST_TAB_LABELS[liste],
+          // On pointe vers l'album dans SA liste : c'est la qu'il porte son
+          // rang, et que la pastille de possession a un sens.
+          href: `${LIST_PATHS[liste]}?album=${jumeau.id}`,
+        })
+      }
+
+      return { liste, trouves }
+    })
+
+    const orphelins = vinyles
+      .filter((album) => restants.has(album.id))
+      .map((album) => ({
+        id: album.id,
+        artist: album.artist,
+        title: album.title,
+        badge: "Vinyle",
+        href: `${LIST_PATHS.vinyl}?album=${album.id}`,
+      }))
+
+    return { parListe, orphelins, total: vinyles.length }
+  }, [albumsByList])
 
   const topArtist = stats.artists[0] ?? null
   const repeated = stats.artists.filter((a) => a.count > 1).length
@@ -330,6 +411,39 @@ export function StatsView() {
               </ol>
             </section>
 
+            {/* Propre au perimetre « Vinyles » : ailleurs, le croisement
+                repondrait a une question que personne ne se pose. */}
+            {scope === "vinyl" && croisement.total > 0 && (
+              <section className="rounded-xl border border-border bg-card p-4 sm:p-5">
+                <h2 className="mb-1 font-mono text-xs uppercase tracking-widest text-muted-foreground">
+                  Ma collection face à mes listes
+                </h2>
+                <p className="mb-4 text-xs text-muted-foreground">
+                  Sur {croisement.total} disques possédés, ceux qui figurent aussi dans un
+                  classement.
+                </p>
+                <ul className="flex flex-col gap-1">
+                  {croisement.parListe.map(({ liste, trouves }) => (
+                    <DisclosureRow
+                      key={liste}
+                      label={LIST_LABELS[liste]}
+                      note="en vinyle"
+                      count={trouves.length}
+                      total={croisement.total}
+                      albums={trouves}
+                    />
+                  ))}
+                  <DisclosureRow
+                    label="Dans aucune autre liste"
+                    note="uniquement en vinyle"
+                    count={croisement.orphelins.length}
+                    total={croisement.total}
+                    albums={croisement.orphelins}
+                  />
+                </ul>
+              </section>
+            )}
+
             {/* Reserve a l'administrateur : c'est une file de travail, pas une
                 statistique. Un visiteur n'a que faire de ce qu'il reste a saisir,
                 et l'afficher exposerait les lacunes de la collection. */}
@@ -343,7 +457,14 @@ export function StatsView() {
                 </p>
                 <ul className="flex flex-col gap-1">
                   {stats.completeness.map((item) => (
-                    <CompletenessRow key={item.label} item={item} total={stats.total} />
+                    <DisclosureRow
+                      key={item.label}
+                      label={item.label}
+                      note="à compléter"
+                      count={item.filled}
+                      total={stats.total}
+                      albums={item.missing.map(toMissingItem)}
+                    />
                   ))}
                 </ul>
               </section>

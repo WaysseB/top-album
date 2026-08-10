@@ -7,6 +7,9 @@ import {
   ALBUM_LISTS,
   decadeLabel,
   decadeOf,
+  findSameAlbum,
+  fold,
+  indexByMatchKey,
   LIST_SHOWS_RANK,
   LIST_LABELS,
   LIST_TAB_LABELS,
@@ -56,26 +59,6 @@ const EMPTY_STATES: Record<AlbumList, string> = {
   wannabe: "Aucun album en attente.",
   ost: "Aucune bande originale pour le moment.",
   vinyl: "Aucun vinyle : lancez la synchronisation Discogs.",
-}
-
-/** Repli des accents et de la casse, pour une recherche tolerante. */
-function fold(value: string): string {
-  return value
-    .normalize("NFD")
-    .replace(/\p{M}/gu, "")
-    .toLowerCase()
-    .trim()
-}
-
-/**
- * Cle de rapprochement d'un album entre deux listes.
- *
- * Plus permissive que la recherche : la ponctuation et les espaces sautent
- * aussi. « Bon Iver, Bon Iver » saisi a la main et « Bon Iver Bon Iver » venu de
- * Discogs designent le meme disque, et doivent se retrouver.
- */
-function matchKey(album: Album): string {
-  return `${fold(album.artist)}|${fold(album.title)}`.replace(/[^a-z0-9|]/g, "")
 }
 
 function decadeKey(album: Album): string {
@@ -219,16 +202,12 @@ export function AlbumsView({ list }: Props) {
   )
   const detailEntry = allEntries.find(({ album }) => album.id === detailId) ?? null
 
-  const vinylIndex = useMemo(() => {
-    const index = new Map<string, Album>()
-    for (const album of albumsByList.vinyl) index.set(matchKey(album), album)
-    return index
-  }, [albumsByList.vinyl])
+  const vinylIndex = useMemo(() => indexByMatchKey(albumsByList.vinyl), [albumsByList.vinyl])
 
   // Inutile de signaler la possession sur la liste des vinyles elle-meme.
   const ownedVinyl =
     detailEntry && detailEntry.list !== "vinyl"
-      ? vinylIndex.get(matchKey(detailEntry.album)) ?? null
+      ? findSameAlbum(detailEntry.album, vinylIndex)
       : null
 
   /**
