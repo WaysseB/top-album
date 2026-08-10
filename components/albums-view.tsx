@@ -395,14 +395,19 @@ export function AlbumsView({ list }: Props) {
     // l'ecran, ce qu'un conteneur centre lui interdirait.
     <main className="min-h-screen pb-10">
       <div className="mx-auto max-w-6xl px-4 pt-10 sm:px-8 lg:px-12">
-        <header className="mb-6 flex flex-col gap-3">
+        <header className="mb-6 flex flex-col gap-4">
           {/*
-            Ligne de surtitre, sur toute la largeur : « Wes » a gauche, le lien
-            colle au bord droit. Loge dans la colonne de titre, il se serait cale
-            sur la largeur du sous-titre et aurait flotte au milieu de l'en-tete.
+            Le titre occupe sa propre ligne, sur toute la largeur, et le lien se
+            cale au bord droit. Loge dans la colonne de titre, il se calerait sur
+            la largeur du sous-titre et flotterait au milieu de l'en-tete.
+
+            `items-baseline` aligne le lien sur la PREMIERE ligne du titre :
+            celui-ci s'enroule sur telephone sans emmener le lien avec lui.
           */}
-          <div className="flex items-center justify-between gap-4">
-            <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Wes</p>
+          <div className="flex items-baseline justify-between gap-4">
+            <h1 className="text-3xl font-semibold tracking-tight text-foreground text-balance sm:text-4xl">
+              {LIST_LABELS[list]}
+            </h1>
             <button
               type="button"
               onClick={() => setAboutOpen(true)}
@@ -412,15 +417,10 @@ export function AlbumsView({ list }: Props) {
             </button>
           </div>
 
-          <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <h1 className="text-3xl font-semibold tracking-tight text-foreground text-balance sm:text-4xl">
-                {LIST_LABELS[list]}
-              </h1>
-              <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
-                {albums.length} album{albums.length > 1 ? "s" : ""} · {SUBTITLES[list]}
-              </p>
-            </div>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
+              {albums.length} album{albums.length > 1 ? "s" : ""} · {SUBTITLES[list]}
+            </p>
 
             {/* Les boutons passent a h-10 sur mobile : 32 px se ratent au pouce. */}
             <div className="flex flex-wrap items-center gap-2">
