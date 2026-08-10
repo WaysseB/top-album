@@ -314,7 +314,6 @@ export function StatsView() {
     <main className="min-h-screen px-4 py-10 sm:px-8 lg:px-12">
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <header>
-          <p className="mb-1 font-mono text-xs uppercase tracking-widest text-muted-foreground">Ma sélection</p>
           <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">Statistiques</h1>
           <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
             Ce que disent {stats.total} album{stats.total > 1 ? "s" : ""} de mes goûts.
