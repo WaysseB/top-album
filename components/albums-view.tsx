@@ -467,7 +467,9 @@ export function AlbumsView({ list }: Props) {
         ici une fois qu'on parcourt la grille.
       */}
       <StickyBar className="mb-6">
-        <div className="mx-auto flex max-w-6xl flex-col gap-1.5 px-4 py-1.5 sm:px-8 sm:py-2 lg:px-12">
+        {/* Rembourrage bas plus genereux que le haut : la derniere rangee de
+            pastilles touchait la bordure de la barre. */}
+        <div className="mx-auto flex max-w-6xl flex-col gap-1.5 px-4 pb-3 pt-1.5 sm:px-8 sm:pb-3.5 sm:pt-2 lg:px-12">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <ListTabs counts={counts} />
             {!editMode && <AlbumSearch value={query} onChange={setQuery} resultCount={visible.length} />}
