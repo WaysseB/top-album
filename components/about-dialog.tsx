@@ -39,16 +39,9 @@ export function AboutDialog({ open, onClose }: Props) {
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4 sm:px-6">
-            <div>
-              {/* Meme surtitre que l'en-tete des listes : la modale doit se lire
-                  comme une page du meme site, pas comme une piece rapportee. */}
-              <p className="mb-1 font-mono text-xs uppercase tracking-widest text-muted-foreground">
-                Wes
-              </p>
-              <h2 id="about-title" className="text-xl font-semibold leading-tight text-foreground text-balance">
-                {INTRO_TITLE}
-              </h2>
-            </div>
+            <h2 id="about-title" className="text-xl font-semibold leading-tight text-foreground text-balance">
+              {INTRO_TITLE}
+            </h2>
             <button
               type="button"
               onClick={onClose}
