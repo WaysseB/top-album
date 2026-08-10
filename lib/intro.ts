@@ -10,7 +10,7 @@
  * paragraphe par entree. Ni Markdown ni HTML — du texte, volontairement.
  */
 
-export const INTRO_TITLE = "À propos de ce classement"
+export const INTRO_TITLE = "À propos"
 
 export const INTRO_PARAGRAPHS: string[] = [
   "Moi, j'aime les albums.",
