@@ -7,7 +7,7 @@ import type { Album } from "@/lib/albums"
 import { useModal } from "@/hooks/use-modal"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { deezerPageUrl, deezerWidgetHeight, deezerWidgetUrl, parseDeezerRef } from "@/lib/deezer"
-import { ChevronLeft, ChevronRight, ExternalLink, Pencil, Trash2, X } from "lucide-react"
+import { ChevronLeft, ChevronRight, Disc3, ExternalLink, Pencil, Trash2, X } from "lucide-react"
 
 type Props = {
   album: Album | null
@@ -20,6 +20,12 @@ type Props = {
   /** Absent en bout de liste : la commande correspondante disparait. */
   onPrevious?: () => void
   onNext?: () => void
+  /**
+   * Le vinyle correspondant, quand l'album figure aussi dans la collection.
+   * Nul si l'album est deja consulte depuis la liste des vinyles : la pastille
+   * n'y apprendrait rien.
+   */
+  ownedVinyl?: Album | null
   /** Les actions d'edition ne sont rendues que pour l'administrateur connecte. */
   isAdmin: boolean
   onClose: () => void
@@ -54,6 +60,7 @@ export function AlbumDetail({
   total = 0,
   onPrevious,
   onNext,
+  ownedVinyl = null,
   isAdmin,
   onClose,
   onSelectArtist,
@@ -220,6 +227,19 @@ export function AlbumDetail({
 
           <div className="flex flex-col gap-3 p-5">
             <div>
+              {/* Au-dessus du titre : sa propre ligne, donc aucune interaction
+                  avec la longueur de celui-ci. */}
+              {ownedVinyl && (
+                <span
+                  className="mb-2 inline-flex items-center gap-1 rounded-full border border-primary/60 bg-primary/15 px-2 py-0.5 text-xs font-medium text-foreground"
+                  // Le support exact est trop long pour la pastille, mais c'est
+                  // l'information qu'on cherche en la voyant.
+                  title={ownedVinyl.format || "Dans ma collection"}
+                >
+                  <Disc3 className="h-3 w-3" aria-hidden="true" />
+                  Je l&apos;ai en vinyle
+                </span>
+              )}
               <h2 className="text-xl font-semibold leading-tight text-foreground text-balance">{album.title}</h2>
               <p className="text-sm text-muted-foreground">
                 {album.artist &&
@@ -246,7 +266,7 @@ export function AlbumDetail({
                 </p>
               )}
               {album.genres.length > 0 && (
-                <div className="mt-2.5 flex flex-wrap gap-1.5">
+                <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
                   {album.genres.map((genre) => (
                     <span
                       key={genre}

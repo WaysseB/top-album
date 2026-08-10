@@ -67,6 +67,17 @@ function fold(value: string): string {
     .trim()
 }
 
+/**
+ * Cle de rapprochement d'un album entre deux listes.
+ *
+ * Plus permissive que la recherche : la ponctuation et les espaces sautent
+ * aussi. « Bon Iver, Bon Iver » saisi a la main et « Bon Iver Bon Iver » venu de
+ * Discogs designent le meme disque, et doivent se retrouver.
+ */
+function matchKey(album: Album): string {
+  return `${fold(album.artist)}|${fold(album.title)}`.replace(/[^a-z0-9|]/g, "")
+}
+
 function decadeKey(album: Album): string {
   const decade = decadeOf(album.year)
   return decade === null ? NO_DECADE : String(decade)
@@ -207,6 +218,18 @@ export function AlbumsView({ list }: Props) {
     [currentEntries, otherEntries],
   )
   const detailEntry = allEntries.find(({ album }) => album.id === detailId) ?? null
+
+  const vinylIndex = useMemo(() => {
+    const index = new Map<string, Album>()
+    for (const album of albumsByList.vinyl) index.set(matchKey(album), album)
+    return index
+  }, [albumsByList.vinyl])
+
+  // Inutile de signaler la possession sur la liste des vinyles elle-meme.
+  const ownedVinyl =
+    detailEntry && detailEntry.list !== "vinyl"
+      ? vinylIndex.get(matchKey(detailEntry.album)) ?? null
+      : null
 
   /**
    * Le tirage ignore l'onglet — c'est un « surprends-moi », pas un echantillon
@@ -631,6 +654,7 @@ export function AlbumsView({ list }: Props) {
         album={detailEntry?.album ?? null}
         rank={detailEntry?.rank ?? 0}
         showRank={detailEntry ? LIST_SHOWS_RANK[detailEntry.list] : false}
+        ownedVinyl={ownedVinyl}
         position={detailIndex >= 0 ? detailIndex + 1 : 0}
         total={neighbours.length}
         onPrevious={detailIndex > 0 ? () => goToNeighbour(-1) : undefined}
