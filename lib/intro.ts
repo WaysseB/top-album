@@ -25,7 +25,9 @@ export const INTRO_PARAGRAPHS: string[] = [
 
   "Dans un album, c'est aussi la vie d'un(e) artiste, ou d'un groupe qui est documentée. Que ce soit la fougue de la jeunesse ou la sagesse de l'âge, c'est une photo qui dit quelque chose de l'instant de sa capture.",
 
-  "Un album, c'est un ensemble de choix, de décisions artistiques, prises à un instant T. C'est un voyage, une capsule temporelle. Y passer l'espace de 45 minutes, c'est se replonger dans des souvenirs, dans une époque. Et c'est aussi le meilleur moyen de découvrir ce que ces artistes ont voulu partager leur art au plus grand nombre.",
+  "Un album, c'est un ensemble de choix, de décisions artistiques, prises à un instant T. C'est un voyage, une capsule temporelle. Y passer l'espace de 45 minutes, c'est se replonger dans des souvenirs, dans une époque.",
+
+  "Et écouter un album de bout en bout, c'est aussi le meilleur moyen de découvrir ce que ces artistes ont voulu partager au plus grand nombre.",
 
   "Bref, c'est pour tout ça, que j'aime les albums.",
   
