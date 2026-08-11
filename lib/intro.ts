@@ -13,7 +13,7 @@
 export const INTRO_TITLE = "À propos"
 
 export const INTRO_PARAGRAPHS: string[] = [
-  "Moi, j'aime les albums.",
+  "Moi, j'aime les albums. Pourquoi ?",
 
   "Déjà, c'est une pochette. Un visuel qui claque, qui marque, qui dérange parfois, qui raconte (le plus souvent) quelque chose. Parfois c'est juste un logo, une photo célèbre, une mascotte ou même un animal. Parfois elle vieillit mal, parfois elle reste fraîche, même des dizaines d'années après sa sortie. Et de temps en temps, elle devient tellement iconique qu'elle finit sur des t-shirts, sur des tasses ou accrochée à des murs. On te parle, 'le bébé de Nirvana'.",
 
@@ -31,7 +31,9 @@ export const INTRO_PARAGRAPHS: string[] = [
 
   "Bref, c'est pour tout ça, que j'aime les albums.",
   
-  "Alors, voilà mon top, en toute subjectivité, assumée et revendiquée.",
+  "Alors voici les albums de ma vie, ceux qui m'accompagnent au quotidien. Il y a les 'top', ceux auxquels je ne trouve (quasi) aucun défaut et qui font partie de moi. Et il y a les 'Wannabe', ceux qui sont aux portes du Top et que j'aime (presque) tout autant.", 
+  
+  "Listes garanties 100% subjectivité, assumée et revendiquée.",
 
   "Wes",
 ]
