@@ -27,7 +27,7 @@ export const INTRO_PARAGRAPHS: string[] = [
 
   "Un album, c'est un ensemble de choix, de décisions artistiques, prises à un instant T. C'est un voyage, une capsule temporelle. Y passer l'espace de 45 minutes, c'est se replonger dans des souvenirs, dans une époque. Et c'est aussi le meilleur moyen de découvrir ce que ces artistes ont voulu partager leur art au plus grand nombre.",
 
-  "Bref, c'est pour ça que j'aime les albums.",
+  "Bref, c'est pour tout ça, que j'aime les albums.",
   
   "Alors, voilà mon top, en toute subjectivité, assumée et revendiquée.",
 
