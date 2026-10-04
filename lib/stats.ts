@@ -1,4 +1,5 @@
 import { decadeOf, fold, NO_DECADE, type Album } from "@/lib/albums"
+import { countryName } from "@/lib/countries"
 
 export type Tally = {
   /** Cle de regroupement, insensible a la casse et aux accents. */
@@ -19,6 +20,8 @@ export type AlbumStats = {
   total: number
   artists: Tally[]
   genres: Tally[]
+  /** Pays des artistes, en nombre d'albums. Les albums sans pays n'y figurent pas. */
+  countries: Tally[]
   years: Tally[]
   decades: Tally[]
   /** Nombre d'artistes distincts, et part representee par le premier. */
@@ -78,6 +81,11 @@ export function computeStats(albums: Album[]): AlbumStats {
   const artists = group(albums.map((a) => a.artist).filter((name) => !NOT_AN_ARTIST.has(fold(name))))
   const genres = group(albums.flatMap((a) => a.genres))
 
+  // Regroupement sur le code, traduit ensuite : le nom n'est qu'un affichage.
+  const countries = group(albums.flatMap((a) => (a.artistCountry ? [a.artistCountry] : [])))
+    .map((tally) => ({ ...tally, label: countryName(tally.label) }))
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, "fr"))
+
   // Les annees se trient chronologiquement, pas par frequence : le classement
   // par nombre est fait a l'affichage, la frise a besoin de l'ordre naturel.
   const years = group(albums.map((a) => a.year)).sort((a, b) => a.label.localeCompare(b.label))
@@ -104,6 +112,7 @@ export function computeStats(albums: Album[]): AlbumStats {
     total: albums.length,
     artists,
     genres,
+    countries,
     years,
     decades,
     distinctArtists: artists.length,
@@ -112,6 +121,7 @@ export function computeStats(albums: Album[]): AlbumStats {
       check("Pochette", (a) => Boolean(a.cover)),
       check("Année", (a) => Boolean(a.year)),
       check("Genres", (a) => a.genres.length > 0),
+      check("Pays de l'artiste", (a) => Boolean(a.artistCountry)),
       check("Titre préféré", (a) => Boolean(a.favoriteTrack)),
       check("Deezer", (a) => Boolean(a.deezerUrl)),
       check("Spotify", (a) => Boolean(a.spotifyUrl)),

@@ -1,3 +1,5 @@
+import { normalizeCountry } from "@/lib/countries"
+
 /**
  * Le top assume, la liste d'attente, les musiques de jeux video, et la
  * collection vinyle — celle-ci synchronisee depuis Discogs, pas saisie a la main.
@@ -64,6 +66,11 @@ export type Album = {
   list: AlbumList
   title: string
   artist: string
+  /**
+   * Pays d'origine de l'artiste, en code ISO 3166-1 alpha-2 (« GB »).
+   * Pre-rempli depuis MusicBrainz par un script, corrigeable dans le formulaire.
+   */
+  artistCountry?: string
   year: string
   cover: string
   note?: string
@@ -96,6 +103,7 @@ export type AlbumRow = {
   list: string
   title: string
   artist: string | null
+  artist_country: string | null
   year: string | null
   cover: string | null
   note: string | null
@@ -110,7 +118,7 @@ export type AlbumRow = {
 }
 
 export const ALBUM_COLUMNS =
-  "id, list, title, artist, year, cover, note, favorite_track, deezer_url, spotify_url, apple_music_url, genres, format, vinyl_id, position"
+  "id, list, title, artist, artist_country, year, cover, note, favorite_track, deezer_url, spotify_url, apple_music_url, genres, format, vinyl_id, position"
 
 export function rowToAlbum(row: AlbumRow): Album {
   return {
@@ -118,6 +126,7 @@ export function rowToAlbum(row: AlbumRow): Album {
     list: (ALBUM_LISTS as string[]).includes(row.list) ? (row.list as AlbumList) : "top",
     title: row.title,
     artist: row.artist ?? "",
+    artistCountry: row.artist_country ?? undefined,
     year: row.year ?? "",
     cover: row.cover ?? "",
     note: row.note ?? undefined,
@@ -172,6 +181,7 @@ export function normalizeAlbumInput(input: AlbumInput): AlbumInput {
     list: assertList(input.list),
     title,
     artist: clean(input.artist, MAX_TEXT),
+    artistCountry: normalizeCountry(input.artistCountry),
     year: clean(input.year, 10),
     cover: cleanUrl(input.cover),
     note: note || undefined,

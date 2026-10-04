@@ -377,7 +377,7 @@ export function StatsView() {
               />
             </div>
 
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
               <BarList
                 title="Artistes les plus présents"
                 items={stats.artists.filter((a) => a.count > 1).slice(0, 12)}
@@ -388,6 +388,14 @@ export function StatsView() {
                 title="Genres dominants"
                 items={stats.genres.slice(0, 12)}
                 empty="Aucun genre renseigné."
+                unit="album"
+              />
+              {/* En albums, comme les autres classements : c'est la part de la
+                  selection venue de chaque pays, pas un recensement d'artistes. */}
+              <BarList
+                title="Pays des artistes"
+                items={stats.countries.slice(0, 12)}
+                empty="Aucun pays renseigné."
                 unit="album"
               />
             </div>

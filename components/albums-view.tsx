@@ -219,6 +219,17 @@ export function AlbumsView({ list }: Props) {
   // formulaire pour eviter une liaison manuelle inutile.
   const automaticVinyl = editing ? findSameAlbum(editing, vinylIndex) : null
 
+  // Pays deja connus, par artiste : un nouvel album d'un artiste present
+  // ailleurs reprend son pays sans attendre le script.
+  const countryByArtist = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const { album } of allEntries) {
+      const key = fold(album.artist)
+      if (key && album.artistCountry && !map.has(key)) map.set(key, album.artistCountry)
+    }
+    return map
+  }, [allEntries])
+
   /**
    * Le tirage ignore l'onglet — c'est un « surprends-moi », pas un echantillon
    * de la page — mais pas les listes : voir `CURATED_LISTS`. Les filtres actifs
@@ -638,6 +649,7 @@ export function AlbumsView({ list }: Props) {
           defaultList={list}
           vinyls={albumsByList.vinyl}
           automaticVinyl={automaticVinyl}
+          countryForArtist={(artist) => countryByArtist.get(fold(artist))}
           onClose={() => setFormOpen(false)}
           onSubmit={(data) => void handleSubmit(data)}
         />

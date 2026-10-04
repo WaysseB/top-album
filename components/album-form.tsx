@@ -12,6 +12,7 @@ import {
   type AlbumInput,
   type AlbumList,
 } from "@/lib/albums"
+import { countryName, countryOptions } from "@/lib/countries"
 import { Button } from "@/components/ui/button"
 import { VinylPicker } from "@/components/vinyl-picker"
 import { useModal } from "@/hooks/use-modal"
@@ -27,6 +28,8 @@ type Props = {
   vinyls: Album[]
   /** Le vinyle deja rapproche par le calcul, s'il y en a un. */
   automaticVinyl: Album | null
+  /** Pays deja connu pour cet artiste sur un autre album, s'il y en a un. */
+  countryForArtist: (artist: string) => string | undefined
   onClose: () => void
   onSubmit: (data: AlbumInput) => void
 }
@@ -34,6 +37,7 @@ type Props = {
 const EMPTY = {
   title: "",
   artist: "",
+  artistCountry: "",
   year: "",
   cover: "",
   note: "",
@@ -51,6 +55,7 @@ export function AlbumForm({
   defaultList,
   vinyls,
   automaticVinyl,
+  countryForArtist,
   onClose,
   onSubmit,
 }: Props) {
@@ -67,6 +72,7 @@ export function AlbumForm({
         ? {
             title: initial.title,
             artist: initial.artist,
+            artistCountry: initial.artistCountry ?? "",
             year: initial.year,
             cover: initial.cover,
             note: initial.note ?? "",
@@ -96,6 +102,7 @@ export function AlbumForm({
       list,
       title: form.title.trim(),
       artist: form.artist.trim(),
+      artistCountry: form.artistCountry || undefined,
       year: form.year.trim(),
       cover: form.cover.trim(),
       note: form.note.trim() || undefined,
@@ -160,18 +167,52 @@ export function AlbumForm({
               />
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="artist" className="text-xs font-medium text-muted-foreground">
-                Artiste *
-              </label>
-              <input
-                id="artist"
-                className={field}
-                value={form.artist}
-                onChange={(e) => setForm((f) => ({ ...f, artist: e.target.value }))}
-                placeholder="Ex. Radiohead"
-                required
-              />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div className="flex flex-col gap-1.5 sm:col-span-2">
+                <label htmlFor="artist" className="text-xs font-medium text-muted-foreground">
+                  Artiste *
+                </label>
+                <input
+                  id="artist"
+                  className={field}
+                  value={form.artist}
+                  onChange={(e) => setForm((f) => ({ ...f, artist: e.target.value }))}
+                  // Un artiste deja present ailleurs apporte son pays. Jamais
+                  // par-dessus un choix existant : il a peut-etre ete corrige.
+                  onBlur={() =>
+                    setForm((f) =>
+                      f.artistCountry ? f : { ...f, artistCountry: countryForArtist(f.artist) ?? "" },
+                    )
+                  }
+                  placeholder="Ex. Radiohead"
+                  required
+                />
+              </div>
+              <div className="flex flex-col gap-1.5 sm:col-span-1">
+                <label htmlFor="artistCountry" className="text-xs font-medium text-muted-foreground">
+                  Pays
+                </label>
+                <select
+                  id="artistCountry"
+                  className={`${field} pr-8`}
+                  value={form.artistCountry}
+                  onChange={(e) => setForm((f) => ({ ...f, artistCountry: e.target.value }))}
+                  title="Pays d'origine de l'artiste"
+                >
+                  <option value="">Non renseigné</option>
+                  {/* Un code historique (URSS...) pose par le script reste
+                      selectionnable, sans quoi l'enregistrer l'effacerait. */}
+                  {form.artistCountry &&
+                    !countryOptions().some((c) => c.code === form.artistCountry) && (
+                      <option value={form.artistCountry}>{countryName(form.artistCountry)}</option>
+                    )}
+                  {countryOptions().map(({ code, name }) => (
+                    <option key={code} value={code}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             {/* Les paires de champs s'empilent en dessous de sm */}

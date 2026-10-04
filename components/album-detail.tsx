@@ -6,8 +6,9 @@ import { useEffect, useRef } from "react"
 import type { Album } from "@/lib/albums"
 import { useModal } from "@/hooks/use-modal"
 import { Button, buttonVariants } from "@/components/ui/button"
+import { countryName } from "@/lib/countries"
 import { deezerPageUrl, deezerWidgetHeight, deezerWidgetUrl, parseDeezerRef } from "@/lib/deezer"
-import { ChevronLeft, ChevronRight, Disc3, ExternalLink, Pencil, Trash2, X } from "lucide-react"
+import { ChevronLeft, ChevronRight, Disc3, ExternalLink, MapPin, Pencil, Trash2, X } from "lucide-react"
 
 type Props = {
   album: Album | null
@@ -258,6 +259,18 @@ export function AlbumDetail({
                   ))}
                 {album.year ? ` · ${album.year}` : ""}
               </p>
+              {/* Sur sa propre ligne : accole a l'annee, il se lirait comme le
+                  pays de parution du disque. */}
+              {album.artistCountry && (
+                <p
+                  className="mt-1 flex items-center gap-1 text-xs text-muted-foreground/80"
+                  title="Pays d'origine de l'artiste"
+                >
+                  <MapPin className="h-3 w-3 shrink-0" aria-hidden="true" />
+                  <span className="sr-only">Pays de l&apos;artiste :</span>
+                  {countryName(album.artistCountry)}
+                </p>
+              )}
               {album.favoriteTrack && (
                 <p className="mt-1 text-sm italic text-muted-foreground/90">♪ {album.favoriteTrack}</p>
               )}
