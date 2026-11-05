@@ -22,7 +22,7 @@ import {
 } from "@/lib/albums"
 import { useCollection } from "@/components/collection-context"
 import { readUrlState, useUrlState } from "@/hooks/use-url-state"
-import { logoutAction } from "@/app/actions"
+import { logoutAction, syncDiscogsAction } from "@/app/actions"
 import { AlbumCard } from "@/components/album-card"
 import { AlbumForm } from "@/components/album-form"
 import { AlbumDetail } from "@/components/album-detail"
@@ -32,7 +32,7 @@ import { ListTabs } from "@/components/list-tabs"
 import { StickyBar } from "@/components/sticky-bar"
 import { Button } from "@/components/ui/button"
 import { AboutDialog } from "@/components/about-dialog"
-import { Check, Info, ListOrdered, LogOut, Plus, Shuffle } from "lucide-react"
+import { Check, Info, ListOrdered, LogOut, Plus, RefreshCw, Shuffle } from "lucide-react"
 
 type Props = {
   /** Onglet actif. Le reste vient du layout, via le contexte. */
@@ -97,6 +97,7 @@ export function AlbumsView({ list }: Props) {
   const [decade, setDecade] = useState<string | null>(initial.decade)
   const [aboutOpen, setAboutOpen] = useState(initial.about)
   const [editMode, setEditMode] = useState(false)
+  const [syncing, setSyncing] = useState(false)
   /** Id de l'album selectionne au toucher, en attente de sa destination. */
   const [picked, setPicked] = useState<string | null>(null)
 
@@ -371,6 +372,21 @@ export function AlbumsView({ list }: Props) {
     router.refresh()
   }
 
+  const handleDiscogsSync = async () => {
+    setSyncing(true)
+    setNotice(null)
+    try {
+      const result = await syncDiscogsAction()
+      setNotice(result.ok ? result.data : `Synchronisation Discogs impossible : ${result.error}`)
+      if (result.ok) router.refresh()
+    } catch {
+      // Delai depasse ou reseau coupe : l'action n'a pas pu repondre.
+      setNotice("Synchronisation Discogs interrompue. Réessayez dans un instant.")
+    } finally {
+      setSyncing(false)
+    }
+  }
+
   const grid = (entries: Entry[]) => (
     <div
       className={`grid grid-cols-2 gap-x-3 gap-y-6 transition-opacity sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 ${
@@ -468,6 +484,19 @@ export function AlbumsView({ list }: Props) {
                   {editMode ? <Check className="h-4 w-4" /> : <ListOrdered className="h-4 w-4" />}
                   {editMode ? "Terminer" : "Réorganiser"}
                 </Button>
+                {/* La synchro tourne aussi chaque jour toute seule : ce bouton
+                    sert a voir un disque tout juste ajoute sur Discogs. */}
+                {list === "vinyl" && (
+                  <Button
+                    variant="outline"
+                    className="h-10 sm:h-8"
+                    onClick={() => void handleDiscogsSync()}
+                    disabled={editMode || syncing}
+                  >
+                    <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
+                    {syncing ? "Synchronisation…" : "Synchroniser Discogs"}
+                  </Button>
+                )}
                 <Button className="h-10 sm:h-8" onClick={openAdd} disabled={editMode}>
                   <Plus className="h-4 w-4" />
                   Ajouter

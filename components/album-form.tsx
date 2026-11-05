@@ -308,7 +308,7 @@ export function AlbumForm({
                     placeholder="Ex. 2×Vinyl, LP, Album, Reissue"
                   />
                   <p className="text-xs text-muted-foreground/70">
-                    Renseigné par la synchronisation Discogs, écrasé à chaque exécution.
+                    Renseigné par la synchronisation Discogs. Vos modifications sont conservées.
                   </p>
                 </div>
               )}

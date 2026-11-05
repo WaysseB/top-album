@@ -6,6 +6,7 @@ import { createSession, destroySession, requireAdmin } from "@/lib/auth/session"
 import { verifyPassword } from "@/lib/auth/password"
 import { findAdminByUsername } from "@/lib/supabase/admin-users"
 import { deleteAlbum, insertAlbum, reorderAlbums, updateAlbum } from "@/lib/supabase/albums"
+import { describeSync, runDiscogsSync } from "@/lib/discogs"
 
 export type ActionResult<T = void> = { ok: true; data: T } | { ok: false; error: string }
 
@@ -82,5 +83,16 @@ export async function reorderAlbumsAction(ids: string[]): Promise<ActionResult> 
   return run("reorder", async () => {
     await requireAdmin()
     return reorderAlbums(ids)
+  })
+}
+
+/**
+ * Synchronisation Discogs a la demande, sans attendre la tache quotidienne.
+ * Renvoie le message a afficher.
+ */
+export async function syncDiscogsAction(): Promise<ActionResult<string>> {
+  return run("discogs", async () => {
+    await requireAdmin()
+    return describeSync(await runDiscogsSync())
   })
 }
